@@ -103,6 +103,28 @@ export function makeGlassTexture(rand) {
   return toTexture(c);
 }
 
+// A street-level shopfront bay: a coloured fascia over a big display window and a door.
+export function makeShopTexture(fascia, rand) {
+  const [c, ctx] = canvas(128, 112);
+  ctx.fillStyle = '#e9e4da';
+  ctx.fillRect(0, 0, 128, 112);
+  ctx.fillStyle = fascia;
+  ctx.fillRect(0, 6, 128, 22);
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  for (let i = 0; i < 5; i++) ctx.fillRect(14 + i * 20 + rand() * 4, 13, 10 + rand() * 6, 7);
+  const g = ctx.createLinearGradient(0, 30, 0, 112);
+  g.addColorStop(0, '#5f86a0'); g.addColorStop(0.6, '#2a4256'); g.addColorStop(1, '#1d2b38');
+  ctx.fillStyle = g;
+  ctx.fillRect(8, 34, 76, 72);
+  ctx.fillStyle = '#20262e';
+  ctx.fillRect(92, 40, 28, 72);
+  ctx.fillStyle = 'rgba(255,240,200,0.35)';
+  ctx.fillRect(12, 70, 68, 30);
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.beginPath(); ctx.moveTo(8, 80); ctx.lineTo(50, 34); ctx.lineTo(62, 34); ctx.lineTo(8, 94); ctx.fill();
+  return toTexture(c);
+}
+
 // A building sign: name text on a coloured panel.
 export function makeSignTexture(text, bg, fg = '#ffffff') {
   const [c, ctx] = canvas(1024, 160);

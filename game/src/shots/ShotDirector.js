@@ -34,6 +34,8 @@ const SHOTS = {
     game.sky.setHour(18.15);
     game.money = 18450;
     const x = roadCoord(5) + LANE, z = 210;
+    // Keep the camera's side of the boulevard free of parked cars for a clear view.
+    for (const s of game.traffic.parkingSpots) if (Math.abs(s.x - x) < 14 && s.z > z - 90 && s.z < z + 20) s.taken = true;
     const car = new Vehicle(game, 'coupe', x, z, Math.PI, '#ff5a4f');
     car.vz = -26;
     game.vehicles.push(car);
@@ -67,9 +69,10 @@ const SHOTS = {
     game.sky.setHour(17.4);
     game.money = 2350;
     const k = LOCATIONS.kestrel;
-    game.player.place(-250.6, k.z + 22, 0);
+    game.player.place(-251, k.z + 19, 0);
+    for (const s of game.traffic.parkingSpots) if (Math.hypot(s.x - k.x, s.z - k.z) < 30) s.taken = true;
     jumpToStep(game, 0, 'enterCar');
-    const yaw = Math.atan2(k.x - game.player.x, k.z - game.player.z) - 0.25;
+    const yaw = Math.atan2(k.x - game.player.x, k.z - game.player.z) - 0.3;
     game.camera.yaw = yaw; game.camera.pitch = 0.12; game.player.heading = yaw;
     for (const s of [86, 94, 108, 118, 130, 74]) game.peds.spawnOnBlock(0, 1, s);
     for (const s of [190, 205, 215, 160]) game.peds.spawnOnBlock(1, 1, s);
@@ -134,7 +137,14 @@ const SHOTS = {
     const keys = ['KeyW', 'KeyA', 'KeyD', 'KeyS', 'ShiftLeft', 'Space'];
     let errors = 0, firstError = '';
     const dt = 1 / 30;
-    for (let i = 0; i < 3000; i++) {
+    const frames = Number(new URLSearchParams(location.search).get('frames')) || 3000;
+    let t0 = performance.now();
+    for (let i = 0; i < frames; i++) {
+      if (i % 150 === 0) {
+        const p = game.player.position;
+        console.log(`soak ${i} ${(performance.now() - t0).toFixed(0)}ms veh=${game.vehicles.length} parked=${game.traffic.parked.length} peds=${game.peds.peds.length} pos=${p.x.toFixed(0)},${p.z.toFixed(0)} car=${!!game.player.vehicle}`);
+        t0 = performance.now();
+      }
       if (i % 90 === 0) {
         game.input.down.clear();
         for (const k of keys) if (game.rand.chance(0.35)) game.input.down.add(k);

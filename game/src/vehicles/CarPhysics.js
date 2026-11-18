@@ -143,8 +143,9 @@ export class Vehicle {
       const lb = this.parts.lightbar;
       lb.red.color.set(on ? '#ff1f3d' : '#3a0710');
       lb.blue.color.set(on ? '#0b1a44' : '#2f7bff');
-      lb.glowRed.visible = on;
-      lb.glowBlue.visible = !on;
+      lb.glowRed.visible = lb.glowBlue.visible = true;
+      lb.glowRed.material.opacity = on ? 1 : 0.3;
+      lb.glowBlue.material.opacity = on ? 0.3 : 1;
     } else if (this.parts.lightbar) {
       this.parts.lightbar.glowRed.visible = this.parts.lightbar.glowBlue.visible = false;
     }

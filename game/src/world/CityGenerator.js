@@ -5,7 +5,7 @@ import {
   GRID, CELL, HALF, ROAD_HALF, BEACH_START, SHORE_X, LANDMARKS, roadCoord, blockCenter, isDowntown,
 } from './CityLayout.js';
 import {
-  makeRoadTexture, makeFacadeTexture, makeGlassTexture, makeSignTexture, makeSandTexture, makeConcreteTexture,
+  makeRoadTexture, makeFacadeTexture, makeGlassTexture, makeSignTexture, makeSandTexture, makeConcreteTexture, makeShopTexture,
 } from './Textures.js';
 
 const PASTELS = ['#f7c8a8', '#f2a7b5', '#a8e0d8', '#fde7a6', '#c9d8f5', '#f5efe4', '#e9b8e8', '#ffd2a1', '#b9e6b0', '#ffb8a0'];
@@ -73,6 +73,7 @@ export function generateCity(scene, collision, rand) {
   const wallMats = PASTELS.map((c) => new THREE.MeshLambertMaterial({ color: c, map: facadeTex }));
   const glassMats = GLASS_TINTS.map((c) => new THREE.MeshPhongMaterial({ color: c, map: glassTex, shininess: 90, specular: 0x88aacc }));
   const roofMat = new THREE.MeshLambertMaterial({ color: '#c7beb0' });
+  const shopMats = ['#e85d75', '#2a9d8f', '#f4a261', '#3d7dd8', '#7b5cff', '#1b3a5c'].map((c) => new THREE.MeshLambertMaterial({ map: makeShopTexture(c, R) }));
   const trimMat = new THREE.MeshLambertMaterial({ color: '#fbf7ef' });
   const darkMat = new THREE.MeshLambertMaterial({ color: '#4a4f57' });
 
@@ -139,6 +140,13 @@ export function generateCity(scene, collision, rand) {
     const cap = shade(new THREE.Mesh(new THREE.BoxGeometry(w + 0.6, 0.6, d + 0.6), opts.capMat || trimMat), false);
     cap.position.set(m.position.x, h + 0.3, m.position.z);
     scene.add(cap);
+    if (opts.shops !== false) {
+      const shopMat = rand.pick(shopMats);
+      const band = new THREE.Mesh(facadeBox(w + 0.24, 3.6, d + 0.24), [shopMat, shopMat, roofMat, roofMat, shopMat, shopMat]);
+      band.position.set(m.position.x, 1.9, m.position.z);
+      band.receiveShadow = true;
+      scene.add(band);
+    }
     collision.addBox(minX, minZ, maxX, maxZ, h);
     footprints.push({ minX, minZ, maxX, maxZ, h, color: opts.mapColor || '#d9cfc0' });
     return m;
@@ -216,7 +224,7 @@ export function generateCity(scene, collision, rand) {
   function buildLandmark(lm, c, x0, z0) {
     const mat = new THREE.MeshLambertMaterial({ color: lm.color, map: facadeTex });
     const minX = c.x - 22, maxX = c.x + 22, minZ = z0 + 14, maxZ = z0 + 46;
-    addBuilding(minX, minZ, maxX, maxZ, lm.height, mat, { mapColor: '#f0c27a' });
+    addBuilding(minX, minZ, maxX, maxZ, lm.height, mat, { mapColor: '#f0c27a', shops: false });
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(26, 4.06), new THREE.MeshBasicMaterial({ map: makeSignTexture(lm.name, lm.sign) }));
     sign.position.set(c.x, Math.min(lm.height - 3, 8.5), maxZ + 0.08);
     scene.add(sign);
@@ -429,11 +437,21 @@ export function generateCity(scene, collision, rand) {
   // --- Instanced palms and lamps ---------------------------------------------------------------
   const trunkGeo = new THREE.CylinderGeometry(0.18, 0.32, 1, 6);
   trunkGeo.translate(0, 0.5, 0);
-  const trunks = new THREE.InstancedMesh(trunkGeo, new THREE.MeshLambertMaterial({ color: '#8a6a4a' }), palms.length);
-  const crowns = new THREE.InstancedMesh(palmCrownGeometry(), new THREE.MeshLambertMaterial({ color: '#3f9a46', side: THREE.DoubleSide }), palms.length);
+  const crownGeo = palmCrownGeometry();
+  const trunkMat = new THREE.MeshLambertMaterial({ color: '#8a6a4a' });
+  const crownMat = new THREE.MeshLambertMaterial({ color: '#3f9a46', side: THREE.DoubleSide });
   const crownColor = new THREE.Color();
   const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3();
-  palms.forEach((pl, i) => {
+  const inCityPalm = (pl) => Math.abs(pl.x) < HALF + 30 && Math.abs(pl.z) < HALF + 30 || pl.x > HALF;
+  // City palms cast shadows; the outskirts' thousands do not.
+  for (const [list, cast] of [[palms.filter(inCityPalm), true], [palms.filter((pl) => !inCityPalm(pl)), false]]) {
+    const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, list.length);
+    const crowns = new THREE.InstancedMesh(crownGeo, crownMat, list.length);
+    list.forEach((pl, i) => placePalm(pl, i, trunks, crowns));
+    trunks.castShadow = crowns.castShadow = cast;
+    scene.add(trunks, crowns);
+  }
+  function placePalm(pl, i, trunks, crowns) {
     e.set(pl.lean, pl.rot, pl.lean * 0.5);
     q.setFromEuler(e);
     mtx.compose(p.set(pl.x, 0, pl.z), q, s.set(1, pl.h, 1));
@@ -444,9 +462,7 @@ export function generateCity(scene, collision, rand) {
     crowns.setColorAt(i, crownColor.setHSL(0.27 + R() * 0.07, 0.5, 0.32 + R() * 0.12));
     const inCity = Math.abs(pl.x) < HALF + 30 && Math.abs(pl.z) < HALF + 30;
     if (inCity && (pl.x < BEACH_START - 6 || pl.x > BEACH_START + 6)) collision.addBox(pl.x - 0.35, pl.z - 0.35, pl.x + 0.35, pl.z + 0.35, pl.h);
-  });
-  trunks.castShadow = crowns.castShadow = true;
-  scene.add(trunks, crowns);
+  }
 
   const poleGeo = new THREE.CylinderGeometry(0.1, 0.14, 7, 6);
   poleGeo.translate(0, 3.5, 0);

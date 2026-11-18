@@ -46,7 +46,7 @@ export const LOCATIONS = {
   clubCurb: { ...frontOf(2, 5, true), label: 'The Lantern Club' },
   bank: { ...frontOf(3, 3), label: 'Halcyon Trust' },
   bankCurb: { ...frontOf(3, 3, true, 20), label: 'Halcyon Trust' },
-  kestrel: { x: roadCoord(1) - LANE - 1.5, z: blockCenter(0, 1).z, label: 'Coral Heights' },
+  kestrel: { x: roadCoord(1) - 6.5, z: blockCenter(0, 1).z + 13, label: 'Coral Heights' },
   pier: { x: 405, z: 120, label: 'Driftwood Pier' },
   pierRoad: { x: HALF + LANE, z: 120, label: 'Seabreak Parade' },
   boardwalk: { x: 360, z: -60, label: 'Sunbreak Boardwalk' },

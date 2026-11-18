@@ -21,6 +21,52 @@ export class TrafficSystem {
     this.game = game;
     this.cars = [];
     this.spawnTimer = 0;
+    this.parked = [];
+    this.parkingSpots = this.planParking();
+  }
+
+  // Kerbside parking along every street, decided once from the seed.
+  planParking() {
+    const rand = this.game.rand, spots = [];
+    for (let line = 0; line <= GRID; line++) {
+      for (let seg = 0; seg < GRID; seg++) {
+        for (const along of [20, 34, 48, 62]) {
+          for (const side of [-1, 1]) {
+            if (!rand.chance(0.22)) continue;
+            const a = roadCoord(seg) + along, c = roadCoord(line) + side * 6.5;
+            const type = rand.pick(TRAFFIC_MIX);
+            const color = rand.pick(CAR_TYPES[type].colors);
+            // Roads running north-south (x = const) and east-west (z = const).
+            spots.push({ x: c, z: a, heading: side > 0 ? Math.PI : 0, type, color, vehicle: null });
+            if (rand.chance(0.9)) spots.push({ x: a, z: c, heading: side > 0 ? Math.PI / 2 : -Math.PI / 2, type: rand.pick(TRAFFIC_MIX), color: rand.pick(['#e9e4da', '#3f6f9f', '#9a2f2f', '#2ec4b6', '#4a5560']), vehicle: null });
+          }
+        }
+      }
+    }
+    return spots;
+  }
+
+  updateParking(dt) {
+    const game = this.game, p = game.player.position;
+    for (const s of this.parkingSpots) {
+      const d = Math.hypot(s.x - p.x, s.z - p.z);
+      if (!s.vehicle && !s.taken && d < 130) {
+        const v = new Vehicle(game, s.type, s.x, s.z, s.heading, s.color);
+        v.parked = true;
+        s.vehicle = v;
+        game.vehicles.push(v);
+        this.parked.push(v);
+      } else if (s.vehicle) {
+        const v = s.vehicle;
+        const moved = v.driver || Math.hypot(v.x - s.x, v.z - s.z) > 3 || v.wrecked;
+        if (moved) { s.taken = true; s.vehicle = null; v.parked = false; this.cars.push(v); }
+        else if (d > 170) { this.despawn(v); s.vehicle = null; }
+      }
+    }
+    this.parked = this.parked.filter((v) => v.parked && !v.removed);
+    for (const v of this.parked) {
+      if (Math.hypot(v.vx, v.vz) > 0.05) v.drive(dt, { throttle: 0, brake: 0, steer: 0, handbrake: true });
+    }
   }
 
   // Put a car on the lane approaching node (i, j) travelling along dir, `back` metres before it.
@@ -63,10 +109,12 @@ export class TrafficSystem {
 
   update(dt) {
     const game = this.game, p = game.player.position;
+    this.updateParking(dt);
     // Recycle cars far from the player, top up the ring.
     for (const v of this.cars) {
-      const far = Math.hypot(v.x - p.x, v.z - p.z) > 270;
-      if ((far && v.driver !== 'player' && !v.mission) || (v.wrecked && far)) this.despawn(v);
+      const d = Math.hypot(v.x - p.x, v.z - p.z), far = d > 270;
+      if (v.wrecked) v.wreckT = (v.wreckT || 0) + dt;
+      if ((far && v.driver !== 'player' && !v.mission) || (v.wrecked && (far || (v.wreckT > 40 && d > 30)))) this.despawn(v);
     }
     this.cars = this.cars.filter((v) => !v.removed);
     this.spawnTimer -= dt;

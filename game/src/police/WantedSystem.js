@@ -95,7 +95,7 @@ export class WantedSystem {
       // Fresh units.
       this.spawnT -= dt;
       const active = this.cars.filter((v) => !v.wrecked).length;
-      if (active < CARS_FOR_LEVEL[level] && this.spawnT <= 0) {
+      if (active < CARS_FOR_LEVEL[level] && this.spawnT <= 0 && !pl.dead && this.cars.length < 8) {
         this.spawnT = 2.5;
         this.spawnPoliceCar(pp.x, pp.z, 90, 160);
       }

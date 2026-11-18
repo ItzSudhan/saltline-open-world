@@ -31,6 +31,51 @@ const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.28, 14);
 wheelGeo.rotateZ(Math.PI / 2);
 const rimGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.3, 8);
 rimGeo.rotateZ(Math.PI / 2);
+let wheelComboCache = null;
+const wheelComboGet = () => (wheelComboCache ||= mergeGeometries([wheelGeo, rimGeo], true));
+
+// Join indexed geometries into one (positions, normals, uvs), one draw group per source when asked.
+export function mergeGeometries(geos, groups = false) {
+  let verts = 0;
+  for (const g of geos) verts += g.attributes.position.count;
+  const pos = new Float32Array(verts * 3), nor = new Float32Array(verts * 3), uv = new Float32Array(verts * 2);
+  const index = [];
+  const out = new THREE.BufferGeometry();
+  let off = 0;
+  geos.forEach((g, gi) => {
+    const n = g.attributes.position.count;
+    pos.set(g.attributes.position.array, off * 3);
+    nor.set(g.attributes.normal.array, off * 3);
+    if (g.attributes.uv) uv.set(g.attributes.uv.array, off * 2);
+    const start = index.length;
+    const src = g.index ? g.index.array : [...Array(n).keys()];
+    for (const i of src) index.push(i + off);
+    if (groups) out.addGroup(start, index.length - start, gi);
+    off += n;
+  });
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  out.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  out.setIndex(index);
+  return out;
+}
+
+// Collapse a car's static boxes into one mesh per material (far fewer draw calls).
+function mergeByMaterial(group, bodyMat) {
+  const buckets = new Map();
+  for (const m of [...group.children]) {
+    if (!m.isMesh || Array.isArray(m.material) || m.userData.keep) continue;
+    m.updateMatrix();
+    if (!buckets.has(m.material)) buckets.set(m.material, []);
+    buckets.get(m.material).push(m.geometry.clone().applyMatrix4(m.matrix));
+    group.remove(m);
+  }
+  for (const [mat, geos] of buckets) {
+    const mesh = new THREE.Mesh(mergeGeometries(geos), mat);
+    mesh.castShadow = mat === bodyMat;
+    group.add(mesh);
+  }
+}
 
 function box(w, h, d, mat, x, y, z, parent, shadow = true) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -40,11 +85,35 @@ function box(w, h, d, mat, x, y, z, parent, shadow = true) {
   return m;
 }
 
-// Builds a car facing +z. Returns the group and the parts that animate.
+// Each model is built once as a template; every car is a clone sharing its geometry, with its own
+// paint and lightbar materials.
+const templates = new Map();
+const TEMPLATE_PAINT = new THREE.MeshPhongMaterial({ color: '#ffffff', shininess: 70, specular: 0x666666 });
+
 export function buildCarMesh(typeKey, color) {
+  if (!templates.has(typeKey)) templates.set(typeKey, buildCarTemplate(typeKey));
+  const group = templates.get(typeKey).clone(true);
+  const bodyMat = TEMPLATE_PAINT.clone();
+  bodyMat.color.set(color);
+  const parts = { wheels: [], steerPivots: [], lightbar: null, bodyMat };
+  const lb = {};
+  group.traverse((o) => {
+    if (o.material === TEMPLATE_PAINT) o.material = bodyMat;
+    else if (Array.isArray(o.material)) o.material = o.material.map((m) => (m === TEMPLATE_PAINT ? bodyMat : m));
+    if (o.userData.wheel) parts.wheels.push(o);
+    if (o.userData.steer) parts.steerPivots.push(o);
+    if (o.userData.lb) { o.material = o.material.clone(); lb[o.userData.lb] = o.material; }
+    if (o.userData.glow) { o.material = o.material.clone(); lb[o.userData.glow] = o; }
+  });
+  if (lb.red) parts.lightbar = { red: lb.red, blue: lb.blue, glowRed: lb.glowRed, glowBlue: lb.glowBlue };
+  return { group, parts };
+}
+
+// Builds a car facing +z.
+function buildCarTemplate(typeKey) {
   const t = CAR_TYPES[typeKey];
   const g = new THREE.Group();
-  const bodyMat = new THREE.MeshPhongMaterial({ color, shininess: 70, specular: 0x666666 });
+  const bodyMat = TEMPLATE_PAINT;
   const L = t.len, W = t.wid, H = t.h;
   const baseY = 0.42;
   const lowerH = H * 0.42;
@@ -86,7 +155,6 @@ export function buildCarMesh(typeKey, color) {
     box(0.3, 0.02, L * 0.98, new THREE.MeshLambertMaterial({ color: '#ffffff' }), 0.25, baseY + lowerH + 0.11, 0, g, false);
   }
 
-  const parts = { wheels: [], steerPivots: [], lightbar: null, bodyMat };
   if (typeKey === 'police') {
     // Navy doors and a lightbar of the city's own design.
     const navy = new THREE.MeshLambertMaterial({ color: '#16264a' });
@@ -98,6 +166,8 @@ export function buildCarMesh(typeKey, color) {
     box(W * 0.7, 0.08, 0.36, trimMat, 0, roofY - 0.04, cabinZ, g, false);
     const l = box(W * 0.33, 0.16, 0.32, red, -W * 0.18, roofY + 0.06, cabinZ, g, false);
     const r = box(W * 0.33, 0.16, 0.32, blue, W * 0.18, roofY + 0.06, cabinZ, g, false);
+    l.userData.keep = r.userData.keep = true;
+    l.userData.lb = 'red'; r.userData.lb = 'blue';
     // Additive glows so the lightbar reads from a distance and at dusk.
     glowTex ||= makePuffTexture();
     const glow = (color, x) => {
@@ -107,25 +177,24 @@ export function buildCarMesh(typeKey, color) {
       g.add(s);
       return s;
     };
-    parts.lightbar = { left: l, right: r, red, blue, glowRed: glow('#ff2040', -W * 0.25), glowBlue: glow('#2f6bff', W * 0.25) };
+    glow('#ff2040', -W * 0.25).userData.glow = 'glowRed';
+    glow('#2f6bff', W * 0.25).userData.glow = 'glowBlue';
   }
   if (typeKey === 'taxi') {
     box(0.9, 0.28, 0.35, new THREE.MeshBasicMaterial({ color: '#fff7c2' }), 0, baseY + lowerH + cabinH + 0.14, cabinZ, g, false);
     for (const sx of [-1, 1]) box(0.03, 0.18, L * 0.7, new THREE.MeshLambertMaterial({ color: '#ffffff' }), sx * (W / 2 + 0.01), baseY + lowerH * 0.55, 0, g, false);
   }
 
+  mergeByMaterial(g, bodyMat);
   const wx = W / 2 - 0.12, wz = L * 0.33;
   for (const [sx, sz] of [[-1, 1], [1, 1], [-1, -1], [1, -1]]) {
     const pivot = new THREE.Group();
     pivot.position.set(sx * wx, 0.38, sz * wz);
-    const wheel = new THREE.Group();
-    const tyre = new THREE.Mesh(wheelGeo, tyreMat);
-    tyre.castShadow = true;
-    wheel.add(tyre, new THREE.Mesh(rimGeo, rimMat));
+    const wheel = new THREE.Mesh(wheelComboGet(), [tyreMat, rimMat]);
+    wheel.userData.wheel = true;
+    pivot.userData.steer = sz > 0;
     pivot.add(wheel);
     g.add(pivot);
-    parts.wheels.push(wheel);
-    if (sz > 0) parts.steerPivots.push(pivot);
   }
-  return { group: g, parts };
+  return g;
 }
