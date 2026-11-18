@@ -83,6 +83,8 @@ export class SkyAndLighting {
     const az = Math.PI * (dayT) ;
     this.sunDir.set(Math.cos(az), Math.max(0.12, Math.sin(elev) * 0.9), 0.35).normalize();
     this.isNight = h < 5.8 || h > 20.4;
+    const ramp = (x, a, b) => Math.min(1, Math.max(0, (x - a) / (b - a)));
+    this.nightFactor = h >= 12 ? ramp(h, 18.6, 20.4) : 1 - ramp(h, 5, 6.6);
   }
 
   // Keep the shadow camera centred on the action.

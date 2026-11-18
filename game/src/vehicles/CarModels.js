@@ -1,6 +1,7 @@
 // Saltline Bay's own car line-up and the low-poly meshes built for each model.
 import * as THREE from 'three';
 import { makePuffTexture } from '../world/Textures.js';
+import { mergeGeometries } from '../world/StaticBatcher.js';
 
 let glowTex = null;
 
@@ -33,32 +34,6 @@ const rimGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.3, 8);
 rimGeo.rotateZ(Math.PI / 2);
 let wheelComboCache = null;
 const wheelComboGet = () => (wheelComboCache ||= mergeGeometries([wheelGeo, rimGeo], true));
-
-// Join indexed geometries into one (positions, normals, uvs), one draw group per source when asked.
-export function mergeGeometries(geos, groups = false) {
-  let verts = 0;
-  for (const g of geos) verts += g.attributes.position.count;
-  const pos = new Float32Array(verts * 3), nor = new Float32Array(verts * 3), uv = new Float32Array(verts * 2);
-  const index = [];
-  const out = new THREE.BufferGeometry();
-  let off = 0;
-  geos.forEach((g, gi) => {
-    const n = g.attributes.position.count;
-    pos.set(g.attributes.position.array, off * 3);
-    nor.set(g.attributes.normal.array, off * 3);
-    if (g.attributes.uv) uv.set(g.attributes.uv.array, off * 2);
-    const start = index.length;
-    const src = g.index ? g.index.array : [...Array(n).keys()];
-    for (const i of src) index.push(i + off);
-    if (groups) out.addGroup(start, index.length - start, gi);
-    off += n;
-  });
-  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
-  out.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  out.setIndex(index);
-  return out;
-}
 
 // Collapse a car's static boxes into one mesh per material (far fewer draw calls).
 function mergeByMaterial(group, bodyMat) {

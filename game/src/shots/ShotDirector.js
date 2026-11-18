@@ -166,6 +166,47 @@ const SHOTS = {
     console.log(report);
   },
 
+  // Not a screenshot: plays every story mission through MissionDirector, completing each
+  // objective by teleporting or forcing state, and prints which missions pass.
+  missiontest(game) {
+    game.newGame();
+    game.godMode = true;
+    const d = game.missions, pl = game.player, results = [];
+    const run = (sec) => { for (let i = 0; i < sec * 30; i++) { game.update(1 / 30); game.input.endFrame(); } };
+    const goTo = (p, inCar) => {
+      if (inCar && !pl.vehicle) { const v = new Vehicle(game, 'sedan', p.x, p.z + 3, 0); game.vehicles.push(v); game.traffic.cars.push(v); pl.enterVehicle(v); }
+      if (!inCar && pl.vehicle) pl.exitVehicle(true);
+      if (pl.vehicle) { const v = pl.vehicle; v.x = p.x; v.z = p.z; v.vx = v.vz = 0; v.speed = 0; } else pl.place(p.x, p.z);
+    };
+    for (let m = 0; m < MISSIONS.length; m++) {
+      const mission = MISSIONS[m];
+      if (pl.vehicle) pl.exitVehicle(true);
+      game.wanted.clear();
+      d.cooldown = 0;
+      goTo(d.loc(mission.start), false);
+      run(0.5);
+      if (d.active?.id !== mission.id) { results.push(`${mission.id}: did not start`); break; }
+      let guard = 0;
+      while (d.active && guard++ < 40) {
+        const s = d.step;
+        if (s.type === 'enterCar') { pl.place(d.cars[s.id].x + 2, d.cars[s.id].z); pl.enterVehicle(d.cars[s.id]); }
+        else if (s.type === 'deliver') { if (pl.vehicle !== d.cars[s.id]) pl.enterVehicle(d.cars[s.id]); goTo(d.loc(s.to), true); }
+        else if (s.type === 'goto') goTo(d.loc(s.to), !!s.inVehicle);
+        else if (s.type === 'destroy') d.cars[s.id].damage(999, true);
+        else if (s.type === 'eliminate') for (const u of game.hostiles.alive(s.tag)) game.hostiles.damage(u, 999);
+        else if (s.type === 'hold') { goTo(d.loc(s.to), false); run(s.seconds + 1); }
+        else if (s.type === 'loseWanted') game.wanted.clear();
+        run(0.4);
+      }
+      results.push(`${mission.id}: ${d.index > m ? 'PASSED' : `stuck at step ${d.stepIdx} (${d.step?.type})`}`);
+      if (d.index <= m) break;
+    }
+    const report = `MISSIONTEST ${results.join(' | ')} money=${game.money} weapons=${[...game.weapons.owned]}`;
+    const o = document.getElementById('error-overlay');
+    o.style.display = 'block'; o.textContent += report;
+    console.log(report);
+  },
+
   title(game) {
     game.showTitle();
     game.sky.setHour(18.4);

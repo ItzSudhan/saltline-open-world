@@ -6,7 +6,9 @@ import {
 } from './CityLayout.js';
 import {
   makeRoadTexture, makeFacadeTexture, makeGlassTexture, makeSignTexture, makeSandTexture, makeConcreteTexture, makeShopTexture,
+  makeWindowGlowTexture,
 } from './Textures.js';
+import { batchStaticMeshes } from './StaticBatcher.js';
 
 const PASTELS = ['#f7c8a8', '#f2a7b5', '#a8e0d8', '#fde7a6', '#c9d8f5', '#f5efe4', '#e9b8e8', '#ffd2a1', '#b9e6b0', '#ffb8a0'];
 const GLASS_TINTS = ['#bfe6ff', '#a6d8d0', '#d5ccff', '#ffe0c0'];
@@ -64,14 +66,17 @@ function palmCrownGeometry() {
 
 export function generateCity(scene, collision, rand) {
   const R = () => rand.next();
+  const firstChild = scene.children.length;
   const footprints = [];
   const animated = [];
   const anisotropy = 8;
 
   const facadeTex = makeFacadeTexture(R);
   const glassTex = makeGlassTexture(R);
-  const wallMats = PASTELS.map((c) => new THREE.MeshLambertMaterial({ color: c, map: facadeTex }));
-  const glassMats = GLASS_TINTS.map((c) => new THREE.MeshPhongMaterial({ color: c, map: glassTex, shininess: 90, specular: 0x88aacc }));
+  const wallGlow = makeWindowGlowTexture(R), glassGlow = makeWindowGlowTexture(R, true);
+  const glowProps = (map) => ({ emissive: '#ffd9a0', emissiveMap: map, emissiveIntensity: 0 });
+  const wallMats = PASTELS.map((c) => new THREE.MeshLambertMaterial({ color: c, map: facadeTex, ...glowProps(wallGlow) }));
+  const glassMats = GLASS_TINTS.map((c) => new THREE.MeshPhongMaterial({ color: c, map: glassTex, shininess: 90, specular: 0x88aacc, ...glowProps(glassGlow) }));
   const roofMat = new THREE.MeshLambertMaterial({ color: '#c7beb0' });
   const shopMats = ['#e85d75', '#2a9d8f', '#f4a261', '#3d7dd8', '#7b5cff', '#1b3a5c'].map((c) => new THREE.MeshLambertMaterial({ map: makeShopTexture(c, R) }));
   const trimMat = new THREE.MeshLambertMaterial({ color: '#fbf7ef' });
@@ -311,6 +316,7 @@ export function generateCity(scene, collision, rand) {
   scene.add(shallow);
   const foamMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7 });
   const foam = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 900), foamMat);
+  foam.userData.dynamic = true;
   foam.rotation.x = -Math.PI / 2;
   foam.position.set(SHORE_X - 3, 0.16, 0);
   scene.add(foam);
@@ -477,9 +483,17 @@ export function generateCity(scene, collision, rand) {
   });
   scene.add(poles, heads);
 
+  const batch = batchStaticMeshes(scene, firstChild);
+  console.log(`city: ${batch.before} static meshes batched into ${batch.after}`);
+
   return {
     footprints,
     palms,
     update(t) { for (const fn of animated) fn(t); },
+    // 0 by day, 1 at night: windows light up.
+    setNight(f) {
+      for (const m of wallMats) m.emissiveIntensity = f * 1.1;
+      for (const m of glassMats) m.emissiveIntensity = f * 0.9;
+    },
   };
 }

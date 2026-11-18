@@ -239,7 +239,7 @@ export class Game {
       if (input.wasPressed('KeyM')) { this.pause('CITY MAP'); return; }
       if (input.wasPressed('KeyR') && this.player.vehicle) this.audio.nextStation();
       if (input.wasPressed('KeyH') && this.player.vehicle) this.audio.horn(this.player.x, this.player.z);
-      this.sky.setHour(this.sky.hour + dt / 90);
+      this.sky.setHour(this.sky.hour + dt / 240);
       this.player.update(dt);
       this.weapons.update(dt);
       this.services();
@@ -264,6 +264,7 @@ export class Game {
     }
     const p = this.player.position;
     this.sky.follow(p.x, p.z);
+    this.city.setNight(this.sky.nightFactor);
     if (this.state === 'playing') { this.hud.update(dt); this.minimap.draw(dt); }
     this.audio.update(dt);
   }

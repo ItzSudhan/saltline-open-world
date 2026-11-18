@@ -103,6 +103,25 @@ export function makeGlassTexture(rand) {
   return toTexture(c);
 }
 
+// Night window glow for 4x4 bays of the facade (some rooms lit, some dark), used as an emissive map.
+export function makeWindowGlowTexture(rand, glass = false) {
+  const [c, ctx] = canvas(512, 448);
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, 512, 448);
+  for (let bx = 0; bx < 4; bx++) {
+    for (let by = 0; by < 4; by++) {
+      if (rand() < 0.45) continue;
+      const warm = rand() < 0.75;
+      ctx.fillStyle = warm ? `hsl(${38 + rand() * 12}, 90%, ${55 + rand() * 20}%)` : `hsl(195, 70%, ${60 + rand() * 15}%)`;
+      if (glass) ctx.fillRect(bx * 128 + 4, by * 112 + 12, 120, 96);
+      else ctx.fillRect(bx * 128 + 27, by * 112 + 22, 74, 58);
+    }
+  }
+  const t = toTexture(c);
+  t.repeat.set(0.25, 0.25);
+  return t;
+}
+
 // A street-level shopfront bay: a coloured fascia over a big display window and a door.
 export function makeShopTexture(fascia, rand) {
   const [c, ctx] = canvas(128, 112);
