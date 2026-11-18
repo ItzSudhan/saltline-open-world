@@ -1,17 +1,20 @@
 // SALTLINE: an original open-world crime game set in the sun-soaked coastal city of Saltline Bay
 // (three.js, plain ES modules under game/src). This program hands it in for make.fun's gta6-01.
 //
-// A working gta6-01 entry (Node 22, standard library only): the game is this directory's
-// game/ folder, plain static files a desktop browser loads offline (game/index.html and its ES
-// modules, no library and no network request), and the program hands it in. It copies game/ and
-// screenshots/ from beside this file to /output and writes /output/dossier.json, the summary the
-// judge reads, with the vendored make.fun library. Only the plumbing, not an open world: Block
-// Dodger, a plain 2D canvas game where a paddle dodges falling blocks and catches coins, with a
-// title screen, score, lives and levels, game over and restart, flat colours and no sound. Build
-// your own open-world crime game in its place (three.js or any library you vendor under game/),
-// put your 3 or 4 PNG or JPEG screenshots in screenshots/ (the first by name is the cover) and run it.
+// You play Rae Castillo, working up from stolen cars to the vault under Halcyon Trust across five
+// story jobs. The city is generated: a street grid, the outskirts and the hills, a day/night cycle
+// with lit windows after dark, and traffic and pedestrians. You can drive or go on foot, and there
+// are weapons. HEAT is a wanted level from 0 to 5: Saltline Bay PD sends pursuit cars and officers
+// on foot after you. The city also has a garage respray, a gun shop and a safehouse, plus the
+// Sunbreak Sprint street race with best-time records. Saves go to localStorage. The game is
+// game/: plain static files (game/index.html and its ES modules, three.js vendored), no network
+// requests.
 //
-// Serve it locally with `node serve.ts`, then open http://localhost:8080.
+// This program (Node 22, standard library only) hands the game in. It copies game/ and screenshots/
+// to /output and uses the vendored make.fun library to write /output/dossier.json, the summary the
+// judge reads.
+//
+// Play it locally: run `node serve.ts`, then open http://localhost:8080.
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
