@@ -51,6 +51,9 @@ export class Hud {
 
   say(lines) { this.lines.push(...lines); if (this.lineT <= 0) this.nextLine(); }
 
+  // Interrupt whatever is being said.
+  sayNow(lines) { this.lines = [...lines]; this.lineT = 0; this.nextLine(); }
+
   nextLine() {
     const line = this.lines.shift();
     const box = this.el.dialogue;
@@ -102,6 +105,7 @@ export class Hud {
     // Driving vs on foot.
     const v = pl.vehicle;
     el.speedo.style.display = v ? 'block' : 'none';
+    document.getElementById('weapon').style.visibility = v ? 'hidden' : 'visible';
     el.crosshair.style.display = v || pl.dead || game.weapons.current.melee ? 'none' : 'block';
     if (v) {
       el['speed-value'].textContent = Math.round(Math.abs(v.speed) * 3.6);

@@ -140,8 +140,13 @@ export class Vehicle {
     if (this.parts.lightbar && this.sirenOn && !this.wrecked) {
       this.lightTimer += dt;
       const on = Math.floor(this.lightTimer * 6) % 2 === 0;
-      this.parts.lightbar.red.color.set(on ? '#ff1f3d' : '#3a0710');
-      this.parts.lightbar.blue.color.set(on ? '#0b1a44' : '#2f7bff');
+      const lb = this.parts.lightbar;
+      lb.red.color.set(on ? '#ff1f3d' : '#3a0710');
+      lb.blue.color.set(on ? '#0b1a44' : '#2f7bff');
+      lb.glowRed.visible = on;
+      lb.glowBlue.visible = !on;
+    } else if (this.parts.lightbar) {
+      this.parts.lightbar.glowRed.visible = this.parts.lightbar.glowBlue.visible = false;
     }
     if (dt > 0 && this.health < 45) {
       this.smokeTimer -= dt;

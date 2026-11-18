@@ -399,6 +399,33 @@ export function generateCity(scene, collision, rand) {
     scene.add(pole);
   }
 
+  // --- Outskirts beyond the playable grid: low houses, palms and hills on the horizon ------------
+  const houses = [];
+  for (let x = -980; x < HALF + 4; x += 26) {
+    for (let z = -980; z <= 980; z += 26) {
+      if (Math.abs(x) < HALF + 40 && Math.abs(z) < HALF + 40) continue;
+      if (R() < 0.3) continue;
+      if (R() < 0.35) palmAt(x + R() * 10, z + R() * 10, 8 + R() * 4);
+      houses.push({ x: x + R() * 6, z: z + R() * 6, w: 9 + R() * 7, h: 4 + R() * (R() < 0.15 ? 18 : 5), d: 9 + R() * 7 });
+    }
+  }
+  const houseMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), new THREE.MeshLambertMaterial({ color: '#ffffff' }), houses.length);
+  const hc = new THREE.Color();
+  houses.forEach((hs, i) => {
+    houseMesh.setMatrixAt(i, new THREE.Matrix4().compose(new THREE.Vector3(hs.x, 0, hs.z), new THREE.Quaternion(), new THREE.Vector3(hs.w, hs.h, hs.d)));
+    houseMesh.setColorAt(i, hc.set(rand.pick(PASTELS)));
+  });
+  houseMesh.receiveShadow = true;
+  scene.add(houseMesh);
+  const hillMat = new THREE.MeshLambertMaterial({ color: '#8f9a6a' });
+  for (let i = 0; i < 14; i++) {
+    const a = Math.PI * 0.55 + (i / 13) * Math.PI * 0.9;
+    const r = 1150 + R() * 200;
+    const hill = new THREE.Mesh(new THREE.ConeGeometry(220 + R() * 160, 90 + R() * 110, 7), hillMat);
+    hill.position.set(Math.cos(a) * r, 30, Math.sin(a) * r);
+    scene.add(hill);
+  }
+
   // --- Instanced palms and lamps ---------------------------------------------------------------
   const trunkGeo = new THREE.CylinderGeometry(0.18, 0.32, 1, 6);
   trunkGeo.translate(0, 0.5, 0);
@@ -415,7 +442,8 @@ export function generateCity(scene, collision, rand) {
     mtx.compose(p.set(pl.x + top.x, top.y, pl.z + top.z), q, s.set(1, 1, 1));
     crowns.setMatrixAt(i, mtx);
     crowns.setColorAt(i, crownColor.setHSL(0.27 + R() * 0.07, 0.5, 0.32 + R() * 0.12));
-    if (pl.x < BEACH_START - 6 || pl.x > BEACH_START + 6) collision.addBox(pl.x - 0.35, pl.z - 0.35, pl.x + 0.35, pl.z + 0.35, pl.h);
+    const inCity = Math.abs(pl.x) < HALF + 30 && Math.abs(pl.z) < HALF + 30;
+    if (inCity && (pl.x < BEACH_START - 6 || pl.x > BEACH_START + 6)) collision.addBox(pl.x - 0.35, pl.z - 0.35, pl.x + 0.35, pl.z + 0.35, pl.h);
   });
   trunks.castShadow = crowns.castShadow = true;
   scene.add(trunks, crowns);

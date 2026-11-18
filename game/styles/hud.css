@@ -38,7 +38,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0d1726; fon
 #minimap-wrap { position: absolute; left: 26px; bottom: 22px; width: 240px; }
 #minimap { width: 240px; height: 240px; border-radius: 50%; border: 4px solid rgba(255,255,255,.85);
   box-shadow: 0 6px 24px rgba(0,0,0,.5); box-sizing: border-box; display: block; }
-#district-name { position: absolute; left: 252px; bottom: 30px; font-size: 26px; font-weight: 900; font-style: italic;
+#district-name { position: absolute; left: 2px; bottom: 272px; font-size: 26px; font-weight: 900; font-style: italic;
   white-space: nowrap; color: #fff; letter-spacing: 1px; }
 .bars { display: flex; gap: 6px; margin-top: 8px; }
 .bar { flex: 1; height: 11px; background: rgba(0,0,0,.55); border-radius: 6px; overflow: hidden; }

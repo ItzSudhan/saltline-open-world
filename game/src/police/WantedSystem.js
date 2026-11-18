@@ -71,7 +71,12 @@ export class WantedSystem {
   update(dt) {
     const game = this.game, pl = game.player, pp = pl.position;
     const level = this.level;
-    this.cars = this.cars.filter((v) => !v.removed && v.driver === 'police');
+    // Wrecks and far-away units leave the pursuit (traffic cleans them up later).
+    for (const v of this.cars) {
+      if (Math.hypot(v.x - pp.x, v.z - pp.z) > 260) game.traffic.despawn(v);
+      else if (v.wrecked) { v.driver = null; v.sirenOn = false; game.traffic.cars.push(v); }
+    }
+    this.cars = this.cars.filter((v) => !v.removed && !v.wrecked && v.driver === 'police');
 
     // Is anyone from SBPD watching?
     this.seen = false;

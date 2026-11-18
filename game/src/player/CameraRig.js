@@ -37,11 +37,18 @@ export class CameraRig {
         this.yaw += wrapAngle(behind - this.yaw) * Math.min(1, dt * 3.2);
         this.pitch += (0.2 - this.pitch) * Math.min(1, dt * 2);
       }
-      dist = 8.5 + Math.min(4, Math.abs(v.speed) * 0.08);
+      dist = 6.6 + Math.min(2.4, Math.abs(v.speed) * 0.05);
+      // Hold C: look back at whoever is chasing you (telephoto, over the bonnet).
+      this.lookBack = input.isDown('KeyC');
+      if (this.lookBack) {
+        this.yaw = v.heading + Math.PI - 0.32;
+        this.pitch = 0.13;
+        dist = 10.5;
+      }
     } else {
       tx = player.x; ty = 1.55; tz = player.z;
-      dist = player.aiming ? 2.6 : 4.6;
-      shoulder = player.aiming ? 0.75 : 0.35;
+      dist = player.aiming ? 3.3 : 4.6;
+      shoulder = player.aiming ? 0.95 : 0.35;
     }
     this.dist += (dist - this.dist) * Math.min(1, dt * 6);
     this.target.set(tx, ty, tz);
@@ -64,8 +71,8 @@ export class CameraRig {
     }
     this.camera.position.set(cx, cy, cz);
     this.camera.lookAt(cx + this.forwardVec.x * 10, cy + this.forwardVec.y * 10 + (v ? 0.05 : 0), cz + this.forwardVec.z * 10);
-    const fov = v ? 62 + Math.min(14, Math.abs(v.speed) * 0.32) : player.aiming ? 52 : 60;
-    this.camera.fov += (fov - this.camera.fov) * Math.min(1, dt * 4);
+    const fov = v ? (this.lookBack ? 44 : 60 + Math.min(10, Math.abs(v.speed) * 0.2)) : player.aiming ? 54 : 60;
+    this.camera.fov += (fov - this.camera.fov) * Math.min(1, this.lookBack ? 1 : dt * 4);
     this.camera.updateProjectionMatrix();
   }
 

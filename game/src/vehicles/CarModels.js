@@ -1,5 +1,8 @@
 // Saltline Bay's own car line-up and the low-poly meshes built for each model.
 import * as THREE from 'three';
+import { makePuffTexture } from '../world/Textures.js';
+
+let glowTex = null;
 
 export const CAR_TYPES = {
   sedan: { name: 'Ondo Cruiser', len: 4.6, wid: 1.9, h: 1.45, maxSpeed: 40, accel: 15, grip: 7.5,
@@ -45,20 +48,28 @@ export function buildCarMesh(typeKey, color) {
   const L = t.len, W = t.wid, H = t.h;
   const baseY = 0.42;
   const lowerH = H * 0.42;
-  box(W, lowerH, L, bodyMat, 0, baseY + lowerH / 2, 0, g);
+  const lower = box(W, lowerH, L, bodyMat, 0, baseY + lowerH / 2, 0, g);
+  const lp = lower.geometry.attributes.position;
+  for (let i = 0; i < lp.count; i++) if (lp.getY(i) > 0) { lp.setX(i, lp.getX(i) * 0.94); lp.setZ(i, lp.getZ(i) * 0.97); }
+  lower.geometry.computeVertexNormals();
+  // Wheel arches.
+  for (const sz of [-1, 1]) box(W + 0.04, 0.12, 1.1, trimMat, 0, baseY + 0.05, sz * L * 0.33, g, false);
   // Hood and boot taper.
   box(W * 0.96, 0.12, L * 0.28, bodyMat, 0, baseY + lowerH + 0.04, L * 0.34, g);
   const cabinLen = typeKey === 'pickup' ? L * 0.34 : L * (t.sporty ? 0.42 : 0.5);
   const cabinZ = typeKey === 'pickup' ? L * 0.12 : -L * 0.04;
   const cabinH = H - lowerH - (t.sporty ? 0.05 : 0);
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(W * 0.86, cabinH, cabinLen), [glassMat, glassMat, bodyMat, glassMat, glassMat, glassMat]);
+  // Taper the cabin's roof so the windscreen and rear window slope.
+  const cabinGeo = new THREE.BoxGeometry(W * 0.86, cabinH, cabinLen);
+  const cp = cabinGeo.attributes.position;
+  for (let i = 0; i < cp.count; i++) {
+    if (cp.getY(i) > 0) { cp.setZ(i, cp.getZ(i) * (t.sporty ? 0.55 : 0.7) - cabinLen * 0.04); cp.setX(i, cp.getX(i) * 0.9); }
+  }
+  cabinGeo.computeVertexNormals();
+  const cabin = new THREE.Mesh(cabinGeo, [glassMat, glassMat, bodyMat, glassMat, glassMat, glassMat]);
   cabin.position.set(0, baseY + lowerH + cabinH / 2, cabinZ);
   cabin.castShadow = true;
   g.add(cabin);
-  // Pillars give the cabin a car-like silhouette.
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    box(0.08, cabinH, 0.12, bodyMat, sx * W * 0.43, cabin.position.y, cabinZ + sz * cabinLen * 0.48, g, false);
-  }
   if (typeKey === 'pickup') {
     box(W, 0.5, L * 0.38, trimMat, 0, baseY + lowerH + 0.2, -L * 0.28, g);
     box(W * 0.9, 0.06, L * 0.36, new THREE.MeshLambertMaterial({ color: '#3a3328' }), 0, baseY + lowerH + 0.46, -L * 0.28, g, false);
@@ -87,7 +98,16 @@ export function buildCarMesh(typeKey, color) {
     box(W * 0.7, 0.08, 0.36, trimMat, 0, roofY - 0.04, cabinZ, g, false);
     const l = box(W * 0.33, 0.16, 0.32, red, -W * 0.18, roofY + 0.06, cabinZ, g, false);
     const r = box(W * 0.33, 0.16, 0.32, blue, W * 0.18, roofY + 0.06, cabinZ, g, false);
-    parts.lightbar = { left: l, right: r, red, blue };
+    // Additive glows so the lightbar reads from a distance and at dusk.
+    glowTex ||= makePuffTexture();
+    const glow = (color, x) => {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
+      s.scale.setScalar(2.4);
+      s.position.set(x, roofY + 0.1, cabinZ);
+      g.add(s);
+      return s;
+    };
+    parts.lightbar = { left: l, right: r, red, blue, glowRed: glow('#ff2040', -W * 0.25), glowBlue: glow('#2f6bff', W * 0.25) };
   }
   if (typeKey === 'taxi') {
     box(0.9, 0.28, 0.35, new THREE.MeshBasicMaterial({ color: '#fff7c2' }), 0, baseY + lowerH + cabinH + 0.14, cabinZ, g, false);

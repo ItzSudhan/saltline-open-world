@@ -97,7 +97,7 @@ export class Effects {
     fb.m.visible = true;
     fb.life = 0.7;
     this.boomLight.position.set(x, y + 2, z);
-    this.boomLight.intensity = 400;
+    this.boomLight.intensity = 140;
     for (let i = 0; i < 22; i++) {
       this.emit(x, y, z, { color: i % 2 ? '#ff8c2a' : '#ffd166', size: 2.4, life: 0.8, additive: true, grow: 3,
         vx: (Math.random() - 0.5) * 14, vy: Math.random() * 9, vz: (Math.random() - 0.5) * 14 });
@@ -126,7 +126,7 @@ export class Effects {
     }
     for (const t of this.tracers) if (t.life > 0) { t.life -= dt; if (t.life <= 0) t.l.visible = false; }
     this.flash.intensity = Math.max(0, this.flash.intensity - dt * 500);
-    this.boomLight.intensity = Math.max(0, this.boomLight.intensity - dt * 500);
+    this.boomLight.intensity = Math.max(0, this.boomLight.intensity - dt * 160);
     for (const f of this.fireballs) {
       if (f.life <= 0) continue;
       f.life -= dt;

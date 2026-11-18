@@ -27,9 +27,9 @@ function speckle(ctx, w, h, n, colors, rand) {
 export function makeRoadTexture(rand) {
   const S = 1024, k = S / CELL;
   const [c, ctx] = canvas(S, S);
-  ctx.fillStyle = '#3d4047';
+  ctx.fillStyle = '#353a45';
   ctx.fillRect(0, 0, S, S);
-  speckle(ctx, S, S, 26000, ['#35383e', '#474a52', '#41444b', '#2f3237'], rand);
+  speckle(ctx, S, S, 26000, ['#2f333d', '#41454f', '#3b3f49', '#2a2d35'], rand);
   // Wrapped rectangle helper: draws at every tile offset so markings cross edges cleanly.
   const rect = (x, y, w, h, col) => {
     ctx.fillStyle = col;

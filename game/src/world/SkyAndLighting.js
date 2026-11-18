@@ -8,7 +8,7 @@ const KEYS = [
   { h: 8, top: '#3d8fe0', horizon: '#bfe3f5', sun: '#fff1d6', sunI: 2.4, hemi: 0.95, fog: '#c8e4ef' },
   { h: 14, top: '#2f86e0', horizon: '#c6e8f7', sun: '#ffffff', sunI: 2.8, hemi: 1.0, fog: '#cde9f5' },
   { h: 17, top: '#4a7fd0', horizon: '#ffc98a', sun: '#ffcf8a', sunI: 2.6, hemi: 0.85, fog: '#f4c79a' },
-  { h: 18.6, top: '#3e5fae', horizon: '#ff8f5a', sun: '#ff9a4d', sunI: 2.3, hemi: 0.7, fog: '#f0a27a' },
+  { h: 18.6, top: '#3e5fae', horizon: '#ff8f5a', sun: '#ffa865', sunI: 1.9, hemi: 0.8, fog: '#f0a27a' },
   { h: 20, top: '#1d2552', horizon: '#c45b6a', sun: '#ff7a5a', sunI: 0.7, hemi: 0.45, fog: '#8a4f6a' },
   { h: 21.5, top: '#0b1430', horizon: '#26305e', sun: '#6d7fb8', sunI: 0.25, hemi: 0.35, fog: '#26305e' },
   { h: 24, top: '#0b1430', horizon: '#1d2a52', sun: '#6d7fb8', sunI: 0.25, hemi: 0.35, fog: '#1d2a52' },
@@ -56,7 +56,7 @@ export class SkyAndLighting {
     this.sun.shadow.bias = -0.0008;
     this.sun.shadow.normalBias = 0.6;
     scene.add(this.sun, this.sun.target);
-    scene.fog = new THREE.Fog('#f4c79a', 160, 980);
+    scene.fog = new THREE.Fog('#f4c79a', 180, 1500);
     this.renderer = renderer;
     this.apply();
   }

@@ -38,7 +38,7 @@ export class Game {
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
@@ -74,6 +74,11 @@ export class Game {
     addEventListener('resize', () => this.resize());
     this.resize();
     addEventListener('keydown', () => this.audio.unlock(), { once: false });
+    canvas.addEventListener('mousedown', () => this.audio.unlock());
+    // Losing pointer lock (Esc) pauses the game.
+    document.addEventListener('pointerlockchange', () => {
+      if (!document.pointerLockElement && this.state === 'playing') this.pause('PAUSED');
+    });
   }
 
   resize() {

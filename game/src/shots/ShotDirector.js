@@ -44,15 +44,19 @@ const SHOTS = {
     game.weapons.give('smg', 150);
     jumpToStep(game, 4, 'loseWanted');
     game.wanted.setLevel(4);
-    game.hud.lines = [];
-    game.hud.say([{ who: { name: "Tomas 'Tide' Okafor", initials: 'TO', color: '#ffb347' }, text: 'Every cop in Saltline is coming. Lose them, Rae!' }]);
-    const c1 = game.wanted.addPoliceCar(x - 0.5, z + 16, Math.PI); c1.vz = -25;
-    const c2 = game.wanted.addPoliceCar(x - 5.5, z + 30, Math.PI - 0.05); c2.vz = -24;
+    const c1 = game.wanted.addPoliceCar(x - 0.5, z + 10, Math.PI); c1.vz = -27;
+    const c2 = game.wanted.addPoliceCar(x - 7.2, z + 15, Math.PI - 0.04); c2.vz = -27;
+    const c3 = game.wanted.addPoliceCar(x - 3.5, z + 30, Math.PI); c3.vz = -27;
     for (const back of [20, 60]) game.traffic.spawnCar(5, 1, { x: 0, z: 1 }, back);
     game.traffic.spawnCar(5, 3, { x: 0, z: 1 }, 30);
     game.input.down.add('KeyW');
-    simulate(game, 1.6, () => { game.wanted.lastX = car.x; game.wanted.lastZ = car.z; });
+    simulate(game, 0.9, () => { game.wanted.lastX = car.x; game.wanted.lastZ = car.z; });
     quietBanner(game);
+    game.hud.sayNow([{ who: { name: "Tomas 'Tide' Okafor", initials: 'TO', color: '#ffb347' }, text: 'Every cop in Saltline is coming. Lose them, Rae!' }]);
+    // Holding C: the look-back camera on the pursuit.
+    game.input.down.add('KeyC');
+    game.camera.dist = 10.5;
+    game.camera.update(0.001);
     game.forceDistrict = true;
     game.hud.update(0); game.minimap.draw(0);
   },
@@ -75,9 +79,7 @@ const SHOTS = {
     game.weapons.select('pistol');
     simulate(game, 1.2);
     quietBanner(game);
-    game.hud.lines = [];
-    game.hud.lineT = 0;
-    game.hud.say([{ who: { name: "Tomas 'Tide' Okafor", initials: 'TO', color: '#ffb347' }, text: 'Client wants a Kestrel GT. Cherry red. One is parked up in Coral Heights.' }]);
+    game.hud.sayNow([{ who: { name: "Tomas 'Tide' Okafor", initials: 'TO', color: '#ffb347' }, text: 'Client wants a Kestrel GT. Cherry red. One is parked up in Coral Heights.' }]);
     game.forceDistrict = true;
     game.hud.update(0); game.minimap.draw(0);
   },
@@ -96,21 +98,19 @@ const SHOTS = {
     game.missions.hold = 8.5;
     const cop = game.wanted.addPoliceCar(b.x + 14, b.z + 15, -1.2);
     game.wanted.addPoliceCar(b.x - 14, b.z + 17, 1.9);
-    game.camera.yaw = 0.35; game.camera.pitch = 0.08;
+    game.camera.yaw = 0.2; game.camera.pitch = 0.1;
     game.input.buttons[2] = true;
-    game.hud.lines = []; game.hud.lineT = 0;
-    simulate(game, 1.0, (t) => {
-      if (Math.abs(t - 0.6) < 0.02) cop.explode(true);
-      game.camera.yaw = 0.35;
-    });
-    for (const u of game.hostiles.alive()) { u.x = Math.max(u.x, b.x - 12); }
+    simulate(game, 1.0, () => { game.camera.yaw = 0.2; });
     game.hostiles.spawn('police', b.x + 6, b.z + 22, { aggro: true });
-    simulate(game, 0.3, () => { game.camera.yaw = 0.35; });
+    simulate(game, 0.5, (t) => {
+      if (Math.abs(t - 0.3) < 0.02) cop.explode(true);
+      game.camera.yaw = 0.2;
+    });
     game.weapons.cooldown = 0;
     game.weapons.fire();
-    for (const u of game.hostiles.alive().slice(0, 2)) game.effects.tracer(u.x, 1.35, u.z, game.player.x, 1.3, game.player.z, '#9fd0ff');
+    for (const u of game.hostiles.alive().slice(0, 3)) game.effects.tracer(u.x, 1.35, u.z, game.player.x, 1.3, game.player.z, '#9fd0ff');
     quietBanner(game);
-    game.hud.say([{ who: { name: 'SBPD Dispatch', initials: 'PD', color: '#6ab7ff' }, text: 'Silent alarm at Halcyon Trust! All units respond!' }]);
+    game.hud.sayNow([{ who: { name: 'SBPD Dispatch', initials: 'PD', color: '#6ab7ff' }, text: 'Silent alarm at Halcyon Trust! All units respond!' }]);
     game.hud.update(0); game.minimap.draw(0);
   },
 
@@ -125,6 +125,35 @@ const SHOTS = {
     game.player.place(LOCATIONS.club.x, LOCATIONS.club.z, 0);
     simulate(game, 0.5);
     game.pause('CITY MAP');
+  },
+
+  // Not a screenshot: plays 100 simulated seconds of random driving, carjacking and shooting
+  // through the real loop and prints a health report (used to catch runtime errors headless).
+  soak(game) {
+    game.newGame();
+    const keys = ['KeyW', 'KeyA', 'KeyD', 'KeyS', 'ShiftLeft', 'Space'];
+    let errors = 0, firstError = '';
+    const dt = 1 / 30;
+    for (let i = 0; i < 3000; i++) {
+      if (i % 90 === 0) {
+        game.input.down.clear();
+        for (const k of keys) if (game.rand.chance(0.35)) game.input.down.add(k);
+        game.input.down.add('KeyW');
+        if (game.rand.chance(0.3)) game.input.pressed.add('KeyF');
+        game.input.buttons[2] = game.rand.chance(0.3);
+        game.input.mouseDX = (game.rand.next() - 0.5) * 300;
+      }
+      if (i % 7 === 0) game.input.clicked[0] = true;
+      if (i === 600) game.wanted.setLevel(3);
+      if (i === 1200) { const m = game.missions; if (!m.active) m.start(m.next); }
+      try { game.update(dt); } catch (e) { errors++; if (!firstError) firstError = `${e.message} ${e.stack?.split('\n')[1]}`; }
+      game.input.endFrame();
+    }
+    const p = game.player.position;
+    const report = `SOAK frames=3000 errors=${errors} ${firstError}\nvehicles=${game.vehicles.length} peds=${game.peds.peds.length} hostiles=${game.hostiles.units.length} heat=${game.wanted.level} police=${game.wanted.cars.length} money=${game.money} hp=${game.player.health.toFixed(0)} pos=${p.x.toFixed(0)},${p.z.toFixed(0)} inCar=${!!game.player.vehicle} mission=${game.missions.active?.id}`;
+    const o = document.getElementById('error-overlay');
+    o.style.display = 'block'; o.textContent += report;
+    console.log(report);
   },
 
   title(game) {
