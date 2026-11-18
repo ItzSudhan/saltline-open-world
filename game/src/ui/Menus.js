@@ -44,11 +44,12 @@ export class Menus {
       `Cash <b>$${game.money.toLocaleString('en-US')}</b>`,
       `Salt Stashes <b>${game.pickups.stashFound.size}/${STASH_SPOTS.length}</b>`,
       `Cars stolen <b>${s.cars}</b> &middot; Cops dropped <b>${s.cops}</b>`,
+      `Sunbreak Sprint best <b>${game.race.best ? `${game.race.best.toFixed(1)}s` : 'not raced'}</b>`,
       `Arsenal <b>${[...game.weapons.owned].map((w) => w.toUpperCase()).join(' · ')}</b>`,
     ].join('<br>');
     $('legend').innerHTML = [
       ['#ffd166', 'Objective'], ['#19d3c5', 'Salt Stash'], ['#ffb347', "Tide's Garage (repair, cool heat)"],
-      ['#ffffff', 'Safehouse (save)'], ['#9be08f', 'Ironleaf Arms (resupply)'], ['#ff2a4a', 'SBPD pursuit'],
+      ['#ffffff', 'Safehouse (save)'], ['#9be08f', 'Ironleaf Arms (resupply)'], ['#ff6b5a', 'Sunbreak Sprint street race'], ['#ff2a4a', 'SBPD pursuit'],
     ].map(([c, t]) => `<span class="dot" style="background:${c}"></span>${t}`).join('<br>');
     game.minimap.drawBig();
   }

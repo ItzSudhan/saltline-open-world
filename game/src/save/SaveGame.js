@@ -18,6 +18,7 @@ export function writeSave(game) {
     ammo: { pistol: game.weapons.ammo.pistol, smg: game.weapons.ammo.smg },
     stashes: [...game.pickups.stashFound],
     stats: game.stats,
+    raceBest: game.race.best,
     hour: game.sky.hour,
     pos: { x: p.x, z: p.z },
   };
@@ -38,6 +39,7 @@ export function applySave(game, data) {
   Object.assign(game.weapons.ammo, data.ammo || {});
   for (const i of data.stashes || []) game.pickups.stashFound.add(i);
   Object.assign(game.stats, data.stats || {});
+  game.race.best = data.raceBest ?? null;
   if (data.hour) game.sky.setHour(data.hour);
   if (data.pos) game.player.place(data.pos.x, data.pos.z);
 }

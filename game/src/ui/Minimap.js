@@ -57,6 +57,7 @@ export class Minimap {
     out.push({ x: LANDMARKS_POS.safehouse.x, z: LANDMARKS_POS.safehouse.z, color: '#ffffff', size: 4.5, label: 'S' });
     out.push({ x: LANDMARKS_POS.garage.x, z: LANDMARKS_POS.garage.z, color: '#ffb347', size: 4.5, label: 'G' });
     out.push(...game.missions.blips());
+    out.push(...game.race.blips());
     return out;
   }
 

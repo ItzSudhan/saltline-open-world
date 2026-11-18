@@ -201,6 +201,14 @@ const SHOTS = {
       results.push(`${mission.id}: ${d.index > m ? 'PASSED' : `stuck at step ${d.stepIdx} (${d.step?.type})`}`);
       if (d.index <= m) break;
     }
+    // The Sunbreak Sprint: start it from the beach road, then pass every checkpoint.
+    goTo(game.race.start, true);
+    run(0.2);
+    game.input.pressed.add('KeyE');
+    run(0.1);
+    let laps = 0;
+    while (game.race.active && laps++ < 20) { goTo(game.race.ring.position, true); run(0.3); }
+    results.push(`race: ${game.race.best ? `WON ${game.race.best.toFixed(1)}s` : 'not finished'}`);
     const report = `MISSIONTEST ${results.join(' | ')} money=${game.money} weapons=${[...game.weapons.owned]}`;
     const o = document.getElementById('error-overlay');
     o.style.display = 'block'; o.textContent += report;

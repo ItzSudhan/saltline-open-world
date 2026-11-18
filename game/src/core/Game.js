@@ -18,6 +18,7 @@ import { WeaponSystem } from '../combat/WeaponSystem.js';
 import { Effects } from '../effects/Effects.js';
 import { resolveCarCollisions } from '../vehicles/CarPhysics.js';
 import { MissionDirector } from '../missions/MissionDirector.js';
+import { StreetRace } from '../activities/StreetRace.js';
 import { Hud } from '../ui/Hud.js';
 import { Minimap } from '../ui/Minimap.js';
 import { Menus } from '../ui/Menus.js';
@@ -61,6 +62,7 @@ export class Game {
     this.wanted = new WantedSystem(this);
     this.weapons = new WeaponSystem(this);
     this.missions = new MissionDirector(this);
+    this.race = new StreetRace(this);
     this.hud = new Hud(this);
     this.minimap = new Minimap(this, this.city.footprints);
     this.audio = new SoundEngine(this);
@@ -255,6 +257,7 @@ export class Game {
       resolveCarCollisions(this.vehicles.filter((v) => Math.hypot(v.x - this.player.x, v.z - this.player.z) < 150));
       if (this.state === 'playing') {
         this.missions.update(dt, this.time);
+        this.race.update(dt, this.time);
         this.pickups.update(dt, this.time);
         this.camera.update(dt);
         this.driftSmoke();
