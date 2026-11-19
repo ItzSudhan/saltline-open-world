@@ -47,7 +47,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0d1726; fon
 .utag { margin-left: auto; font-size: 13px; letter-spacing: 1px; padding: 0 7px; border-radius: 4px; color: #0d1726; text-shadow: none; background: var(--c); }
 .unit.more { color: rgba(255,255,255,.6); font-weight: 600; }
 
-#topright { position: absolute; right: 24px; top: 14px; text-align: right; width: 300px; }
+#topright { position: absolute; right: 24px; top: 14px; text-align: right; width: 320px; }
 #clock { font-size: 18px; font-weight: 700; opacity: .9; }
 #money { font-size: 42px; font-weight: 900; color: #7dffa8; letter-spacing: 1px; line-height: 1.05; }
 #rank-box { margin-top: 4px; }
@@ -57,13 +57,16 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0d1726; fon
 #rank-bar { margin: 4px 0 2px auto; width: 300px; height: 8px; background: rgba(0,0,0,.5); border-radius: 4px; overflow: hidden; }
 #rank-fill { height: 100%; width: 0; background: linear-gradient(90deg, #7b5cff, #8ff7ec); }
 #rank-rp { font-size: 14px; font-weight: 700; color: rgba(255,255,255,.8); }
-#heat { margin-top: 8px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+#heat { margin-top: 8px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap;
+  background: linear-gradient(270deg, rgba(10,18,32,.7), rgba(10,18,32,.35)); border-radius: 10px; padding: 5px 10px 4px; }
+#heat.hot { box-shadow: inset 0 -3px 0 rgba(255,77,61,.8); }
+#money { text-shadow: 0 2px 4px rgba(0,0,0,.8), 0 0 14px rgba(0,0,0,.45); }
 .heat-word { font-size: 40px; font-weight: 900; font-style: italic; letter-spacing: 1px; line-height: 1; color: rgba(255,255,255,.45); }
 .heat-word span { font-size: 22px; margin-left: 5px; vertical-align: top; }
 #heat.hot .heat-word { background: linear-gradient(180deg, #ffe08a, #ff4d3d); -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 2px 3px rgba(0,0,0,.7)); }
 #heat-flames { display: flex; gap: 2px; }
-.flame { width: 30px; height: 40px; }
+.flame { width: 27px; height: 37px; }
 .flame path { fill: rgba(0,0,0,.4); stroke: rgba(255,255,255,.4); stroke-width: 1.5; }
 .flame path.core { fill: none; stroke: none; }
 .flame.on path { fill: #ff4d3d; stroke: #ffe08a; filter: drop-shadow(0 0 5px #ff4d3d); }

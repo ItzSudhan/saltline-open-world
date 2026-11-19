@@ -47,7 +47,11 @@ export class Vehicle {
     let vF = this.vx * fx + this.vz * fz;
     let vR = this.vx * rx + this.vz * rz;
 
-    if (c.throttle > 0) vF += t.accel * c.throttle * dt * (vF < t.maxSpeed ? 1 : 0);
+    // Shredded tyres (a spike strip): less top speed and grip, and the car pulls side to side.
+    const top = this.flat ? t.maxSpeed * 0.5 : t.maxSpeed;
+    if (this.flat && Math.abs(vF) > 4) c = { ...c, steer: c.steer + Math.sin(this.wheelSpin * 0.07) * 0.18 };
+    if (c.throttle > 0) vF += t.accel * c.throttle * dt * (vF < top ? 1 : 0);
+    if (vF > top) vF -= Math.min(vF - top, 6 * dt);
     if (c.brake > 0) {
       if (vF > 0.8) vF -= 30 * c.brake * dt;
       else if (vF > -t.maxSpeed * 0.35) vF -= t.accel * 0.6 * c.brake * dt;
@@ -56,7 +60,7 @@ export class Vehicle {
     if (!c.throttle && !c.brake) vF -= Math.sign(vF) * Math.min(Math.abs(vF), 3 * dt);
     vF *= 1 - 0.12 * dt;
 
-    const grip = c.handbrake ? 1.4 : t.grip;
+    const grip = c.handbrake ? 1.4 : this.flat ? t.grip * 0.6 : t.grip;
     vR *= Math.exp(-grip * dt);
 
     const speedFrac = clamp(Math.abs(vF) / t.maxSpeed, 0, 1);

@@ -157,8 +157,8 @@ export class HudPanels {
     const game = this.game, v = game.player.vehicle;
     if (!v) return;
     const dmg = Math.round(100 - Math.max(0, v.health));
-    $('vehicle-dmg').textContent = `DMG ${dmg}%`;
-    $('vehicle-dmg').style.color = dmg > 55 ? '#ff6b5a' : dmg > 25 ? '#ffd166' : '#7dffa8';
+    $('vehicle-dmg').textContent = `DMG ${dmg}%${v.flat ? ' · TYRES FLAT' : ''}`;
+    $('vehicle-dmg').style.color = dmg > 55 || v.flat ? '#ff6b5a' : dmg > 25 ? '#ffd166' : '#7dffa8';
     $('dmg-fill').style.width = `${Math.max(0, v.health)}%`;
     const st = game.audio?.station ?? 0;
     $('radio-name').textContent = RADIO_STATIONS[st];

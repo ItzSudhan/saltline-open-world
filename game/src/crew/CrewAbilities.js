@@ -63,9 +63,10 @@ export class CrewAbilities {
     if (member.id === 'fix') {
       if (!v) return 'Nothing to fix. You are on foot.';
       if (v.wrecked) return 'That one is scrap. Find another ride.';
-      if (v.health >= 99) return 'She is running fine. Call me when it smokes.';
+      if (v.health >= 99 && !v.flat) return 'She is running fine. Call me when it smokes.';
       v.health = 100;
-      game.hud.toast(`${v.type.name} patched up · 0% damage`);
+      game.hud.toast(`${v.type.name} patched up${v.flat ? ' · new tyres' : ''} · 0% damage`);
+      v.flat = false;
       return null;
     }
     if (member.id === 'eyes') {

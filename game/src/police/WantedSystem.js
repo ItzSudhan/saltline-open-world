@@ -211,7 +211,7 @@ export class WantedSystem {
 
   checkBust(dt) {
     const game = this.game, pl = game.player;
-    if (this.level === 0 || pl.dead) { this.bustT = 0; return; }
+    if (this.level === 0 || pl.dead || game.godMode) { this.bustT = 0; return; }
     const pp = pl.position;
     let close = false;
     if (!pl.vehicle) {

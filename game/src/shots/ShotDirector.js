@@ -83,7 +83,7 @@ const SHOTS = {
       const c = game.wanted.addPoliceCar(x + ox, z + oz, Math.PI); c.vz = -27.5; return c;
     });
     cops[1].heading = Math.PI - 0.08;
-    game.wanted.roadblocks.place(roadCoord(8), z - 74, 'z');
+    game.wanted.roadblocks.place(roadCoord(8), z - 52, 'z');
     game.traffic.spawnCar(8, 2, { x: 0, z: 1 }, 10, 'scooter', '#ffd166');
     game.traffic.spawnCar(8, 3, { x: 0, z: 1 }, 40, 'taxi');
     game.traffic.spawnCar(8, 3, { x: 0, z: 1 }, 5, 'scooter', '#8ff7ec');
@@ -270,7 +270,7 @@ const SHOTS = {
         else if (s.type === 'loseWanted') game.wanted.clear();
         run(0.4);
       }
-      results.push(`${mission.id}: ${d.index > m ? 'PASSED' : `stuck at step ${d.stepIdx} (${d.step?.type})`}`);
+      results.push(`${mission.id}: ${d.index > m ? 'PASSED' : `stuck at step ${d.stepIdx} (${d.step?.type ?? game.hud.el['banner-sub'].textContent})`}`);
       if (d.index <= m) break;
     }
     // The Sunbreak Sprint: start it from the beach road, then pass every checkpoint.
@@ -322,6 +322,21 @@ const SHOTS = {
     out.push(`rank=${game.rank.rank} ${game.rank.title} shotgun=${game.weapons.owned.has('shotgun')}`);
     writeSave(game); game.rank.rp = 0; applySave(game, readSave());
     out.push(`save rp ${game.rank.rp === rp + 3000 ? 'OK' : 'LOST'}`);
+    // Spike strip: drive a fresh car at a roadblock, then have Dex fix the tyres.
+    if (game.player.vehicle) game.player.exitVehicle(true);
+    const v2 = new Vehicle(game, 'sedan', roadCoord(2) + LANE, 120, Math.PI);
+    game.vehicles.push(v2);
+    game.player.enterVehicle(v2);
+    game.wanted.setLevel(4);
+    game.wanted.roadblocks.clear();
+    game.wanted.roadblocks.place(roadCoord(2), 60, 'z', 1);
+    game.input.down.add('KeyW');
+    run(4);
+    game.input.down.clear();
+    const wasFlat = !!v2.flat;
+    game.crew.cooldowns.fix = 0;
+    game.input.pressed.add('KeyX'); run(0.1);
+    out.push(`spikes flat=${wasFlat} fixed=${!v2.flat}`);
     const report = `SYSTEMSTEST ${out.join(' | ')}`;
     const o = document.getElementById('error-overlay');
     o.style.display = 'block'; o.textContent += report;
