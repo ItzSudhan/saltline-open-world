@@ -60,6 +60,12 @@ export class CharacterModel {
   // speed in m/s; aiming raises the right arm forward.
   animate(dt, speed, aiming = false, armed = false) {
     if (this.dead) return;
+    if (this.sitting) {
+      // Breathing and the odd glance around while sitting on the sand.
+      this.phase += dt;
+      this.head.rotation.y = Math.sin(this.phase * 0.4) * 0.5;
+      return;
+    }
     this.phase += dt * (2.2 + speed * 1.6);
     const swing = Math.min(1, speed / 5) * 0.9 + (speed > 0.2 ? 0.15 : 0);
     const s = Math.sin(this.phase);
@@ -71,6 +77,16 @@ export class CharacterModel {
     this.body.position.y = Math.abs(Math.cos(this.phase)) * 0.06 * swing;
     this.body.rotation.x = speed > 6 ? 0.12 : 0;
     this.gun.visible = armed;
+  }
+
+  // Sitting on a towel: legs out in front, leaning back on the hands.
+  setSitting(on) {
+    this.sitting = on;
+    this.body.position.y = on ? -0.74 : 0;
+    this.body.rotation.x = on ? -0.18 : 0;
+    this.legL.rotation.x = this.legR.rotation.x = on ? -Math.PI / 2 + 0.18 : 0;
+    this.armL.rotation.x = this.armR.rotation.x = on ? 0.55 : 0;
+    this.head.rotation.y = 0;
   }
 
   punch(t) { this.armR.rotation.x = -Math.PI / 2 * Math.sin(Math.min(1, t) * Math.PI); }

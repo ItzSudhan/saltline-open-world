@@ -103,12 +103,12 @@ const SHOTS = {
     game.money = 7350;
     veteran(game, 3420, { plates: 12 });
     jumpToStep(game, 3, 'goto');
-    const px = 337, pz = 20, bw = LOCATIONS.boardwalk;
+    const px = 350, pz = 26, bw = LOCATIONS.boardwalk;
     game.player.place(px, pz, Math.PI);
     const yaw = Math.atan2(bw.x - px, bw.z - pz) - 0.12;
     game.camera.yaw = yaw; game.camera.pitch = 0.1; game.player.heading = yaw;
     game.weapons.select('shotgun');
-    for (let i = 0; i < 34; i++) game.peds.spawnOnBeach(pz - 70 + i * 2);
+    for (let i = 0; i < 46; i++) game.peds.spawnOnBeach(pz - 70 + i * 1.6);
     for (const [bj, n] of [[3, 6], [4, 4]]) for (let i = 0; i < n; i++) game.peds.spawnOnBlock(7, bj, 20 + i * 47);
     game.traffic.spawnCar(8, 4, { x: 0, z: -1 }, 18, 'scooter', '#ff9db0');
     game.traffic.spawnCar(8, 4, { x: 0, z: -1 }, 40, 'coupe');
@@ -116,7 +116,7 @@ const SHOTS = {
     simulate(game, 1.0);
     game.hud.sayNow([{ who: { ...CAST.tide }, text: 'The Coral Kings run that boardwalk. Benny holds court by the big wheel.' }]);
     const p = game.player.position;
-    frame(game, { x: p.x - 3.2, y: 3.4, z: p.z + 6.5 }, { x: p.x + 10, y: 1.2, z: p.z - 30 });
+    frame(game, { x: p.x - 4.5, y: 4.2, z: p.z + 7.5 }, { x: p.x + 16, y: 0.8, z: p.z - 30 });
     finish(game);
   },
 

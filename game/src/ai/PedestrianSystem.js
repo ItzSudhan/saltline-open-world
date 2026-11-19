@@ -62,6 +62,7 @@ export class PedestrianSystem {
       for (const s of spots) if (Math.abs(s.z - z) < Math.abs(best.z - z)) best = s;
       const ped = this.create(randomLook(rand), best.x + (rand.next() - 0.5) * 1.5, best.z + (rand.next() - 0.5) * 1.5);
       Object.assign(ped, { beach: true, idle: true, dir: 1, speed: 1, heading: Math.PI / 2 + (rand.next() - 0.5) * 1.6 });
+      if (rand.chance(0.6)) ped.model.setSitting(true);
       return ped;
     }
     const ped = this.create(randomLook(rand), BEACH_START + 6 + rand.next() * 60, z);
@@ -88,6 +89,7 @@ export class PedestrianSystem {
     if (ped.dead) return;
     ped.state = 'flee';
     ped.idle = false;
+    if (ped.model.sitting) ped.model.setSitting(false);
     ped.fleeT = time;
     ped.fromX = fromX; ped.fromZ = fromZ;
   }
