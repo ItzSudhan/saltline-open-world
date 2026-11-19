@@ -2,7 +2,9 @@
 // into a moment (positions, cars, police, mission step, hour), simulates it with the normal
 // update loop and held keys, then freezes the frame.
 import { Vehicle } from '../vehicles/CarPhysics.js';
-import { MISSIONS } from '../story/StoryScript.js';
+import { MISSIONS, CAST } from '../story/StoryScript.js';
+import { CREW } from '../crew/CrewAbilities.js';
+import { writeSave, readSave, applySave } from '../save/SaveGame.js';
 import { LOCATIONS, LANE, roadCoord } from '../world/CityLayout.js';
 
 function simulate(game, seconds, each) {
@@ -27,64 +29,94 @@ function quietBanner(game) {
   game.hud.el.banner.classList.remove('show');
 }
 
+// A player who has played a while: rank RP (and the gear it unlocks) and crew cooldowns in use.
+function veteran(game, rp, { fix = 0, plates = 0, eyes = false } = {}) {
+  game.rank.rp = rp;
+  game.weapons.give('smg', 150);
+  game.weapons.unlockForRank(game.rank.rank);
+  game.crew.cooldowns.fix = fix;
+  game.crew.cooldowns.plates = plates;
+  if (eyes) { game.crew.use(CREW[2]); game.crew.cooldowns.eyes -= 8; game.crew.eyesOutT -= 8; }
+}
+
+function finish(game) {
+  quietBanner(game);
+  game.hud.toastT = 0; game.hud.el.toast.style.display = 'none';
+  game.forceDistrict = true;
+  game.hud.refreshAll();
+  game.minimap.draw(0);
+}
+
+// Points the render camera directly (the frame is frozen right after).
+function frame(game, from, to) {
+  const cam = game.three.camera;
+  cam.position.set(from.x, from.y, from.z);
+  cam.lookAt(to.x, to.y, to.z);
+  cam.updateMatrixWorld();
+}
+
 const SHOTS = {
-  // Cover: a sunset getaway up Marlin Ave with SBPD on the bumper.
+  // Cover: a golden-hour getaway up Seabreak Parade, beach and surf on the right, three SBPD
+  // cruisers on the bumper, the air unit's searchlight on Rae and a roadblock ahead.
   chase(game) {
     game.startPlaying();
-    game.sky.setHour(18.15);
+    game.sky.setHour(18.1);
     game.money = 18450;
-    const x = roadCoord(5) + LANE, z = 210;
-    // Keep the camera's side of the boulevard free of parked cars for a clear view.
-    for (const s of game.traffic.parkingSpots) if (Math.abs(s.x - x) < 14 && s.z > z - 90 && s.z < z + 20) s.taken = true;
+    const x = roadCoord(8) + LANE, z = 175;
+    for (const s of game.traffic.parkingSpots) if (Math.abs(s.x - x) < 16 && s.z > z - 160 && s.z < z + 40) s.taken = true;
     const car = new Vehicle(game, 'coupe', x, z, Math.PI, '#ff5a4f');
-    car.vz = -26;
+    car.vz = -27;
+    car.health = 81;
     game.vehicles.push(car);
     game.player.enterVehicle(car);
     game.camera.snapBehind(Math.PI);
-    game.camera.lastMouse = 10;
-    game.camera.pitch = 0.14;
-    game.weapons.give('smg', 150);
+    game.player.health = 78; game.player.armor = 45;
+    veteran(game, 6180, { fix: 31, eyes: true });
+    game.weapons.select('smg');
     jumpToStep(game, 4, 'loseWanted');
     game.wanted.setLevel(4);
-    const c1 = game.wanted.addPoliceCar(x - 0.5, z + 10, Math.PI); c1.vz = -27;
-    const c2 = game.wanted.addPoliceCar(x - 7.2, z + 15, Math.PI - 0.04); c2.vz = -27;
-    const c3 = game.wanted.addPoliceCar(x - 3.5, z + 30, Math.PI); c3.vz = -27;
-    for (const back of [20, 60]) game.traffic.spawnCar(5, 1, { x: 0, z: 1 }, back);
-    game.traffic.spawnCar(5, 3, { x: 0, z: 1 }, 30);
+    const heli = game.wanted.heli;
+    heli.placeOver(car.x, car.z, -6, -40);
+    heli.vz = -27;
+    const cops = [[-0.2, 7.5], [-7.4, 11], [-3.4, 17], [-7.2, 26]].map(([ox, oz]) => {
+      const c = game.wanted.addPoliceCar(x + ox, z + oz, Math.PI); c.vz = -27.5; return c;
+    });
+    cops[1].heading = Math.PI - 0.08;
+    game.wanted.roadblocks.place(roadCoord(8), z - 74, 'z');
+    game.traffic.spawnCar(8, 2, { x: 0, z: 1 }, 10, 'scooter', '#ffd166');
+    game.traffic.spawnCar(8, 3, { x: 0, z: 1 }, 40, 'taxi');
+    game.traffic.spawnCar(8, 3, { x: 0, z: 1 }, 5, 'scooter', '#8ff7ec');
+    for (let i = 0; i < 26; i++) game.peds.spawnOnBeach(z - 150 + i * 7);
+    for (const [bj, n] of [[3, 5], [4, 6]]) for (let i = 0; i < n; i++) game.peds.spawnOnBlock(7, bj, 30 + i * 41);
     game.input.down.add('KeyW');
     simulate(game, 0.9, () => { game.wanted.lastX = car.x; game.wanted.lastZ = car.z; });
-    quietBanner(game);
-    game.hud.sayNow([{ who: { name: "Tomas 'Tide' Okafor", initials: 'TO', color: '#ffb347' }, text: 'Every cop in Saltline is coming. Lose them, Rae!' }]);
-    // Holding C: the look-back camera on the pursuit.
-    game.input.down.add('KeyC');
-    game.camera.dist = 10.5;
-    game.camera.update(0.001);
-    game.forceDistrict = true;
-    game.hud.update(0); game.minimap.draw(0);
+    game.hud.sayNow([{ who: { ...CAST.dispatch }, text: 'All units, suspect northbound on Seabreak Parade. HAWK-1 has a light on her.' }]);
+    frame(game, { x: car.x + 5.5, y: 5.4, z: car.z + 23 }, { x: car.x + 5, y: 5.6, z: car.z - 30 });
+    finish(game);
   },
 
-  // On foot in Coral Heights, the target Kestrel GT under its marker across the street.
+  // On foot on the Sunbreak promenade: a busy beach, the boardwalk marker, shotgun in hand.
   street(game) {
     game.startPlaying();
-    game.sky.setHour(17.4);
-    game.money = 2350;
-    const k = LOCATIONS.kestrel;
-    game.player.place(-251, k.z + 19, 0);
-    for (const s of game.traffic.parkingSpots) if (Math.hypot(s.x - k.x, s.z - k.z) < 30) s.taken = true;
-    jumpToStep(game, 0, 'enterCar');
-    const yaw = Math.atan2(k.x - game.player.x, k.z - game.player.z) - 0.3;
-    game.camera.yaw = yaw; game.camera.pitch = 0.12; game.player.heading = yaw;
-    for (const s of [86, 94, 108, 118, 130, 74]) game.peds.spawnOnBlock(0, 1, s);
-    for (const s of [190, 205, 215, 160]) game.peds.spawnOnBlock(1, 1, s);
-    game.traffic.spawnCar(1, 1, { x: 0, z: 1 }, 25);
-    game.traffic.spawnCar(1, 3, { x: 0, z: -1 }, 40);
-    game.traffic.spawnCar(1, 2, { x: 0, z: 1 }, 52);
-    game.weapons.select('pistol');
-    simulate(game, 1.2);
-    quietBanner(game);
-    game.hud.sayNow([{ who: { name: "Tomas 'Tide' Okafor", initials: 'TO', color: '#ffb347' }, text: 'Client wants a Kestrel GT. Cherry red. One is parked up in Coral Heights.' }]);
-    game.forceDistrict = true;
-    game.hud.update(0); game.minimap.draw(0);
+    game.sky.setHour(17.3);
+    game.money = 7350;
+    veteran(game, 3420, { plates: 12 });
+    jumpToStep(game, 3, 'goto');
+    const px = 337, pz = 20, bw = LOCATIONS.boardwalk;
+    game.player.place(px, pz, Math.PI);
+    const yaw = Math.atan2(bw.x - px, bw.z - pz) - 0.12;
+    game.camera.yaw = yaw; game.camera.pitch = 0.1; game.player.heading = yaw;
+    game.weapons.select('shotgun');
+    for (let i = 0; i < 34; i++) game.peds.spawnOnBeach(pz - 70 + i * 2);
+    for (const [bj, n] of [[3, 6], [4, 4]]) for (let i = 0; i < n; i++) game.peds.spawnOnBlock(7, bj, 20 + i * 47);
+    game.traffic.spawnCar(8, 4, { x: 0, z: -1 }, 18, 'scooter', '#ff9db0');
+    game.traffic.spawnCar(8, 4, { x: 0, z: -1 }, 40, 'coupe');
+    game.traffic.spawnCar(8, 3, { x: 0, z: 1 }, 30, 'sedan');
+    simulate(game, 1.0);
+    game.hud.sayNow([{ who: { ...CAST.tide }, text: 'The Coral Kings run that boardwalk. Benny holds court by the big wheel.' }]);
+    const p = game.player.position;
+    frame(game, { x: p.x - 3.2, y: 3.4, z: p.z + 6.5 }, { x: p.x + 10, y: 1.2, z: p.z - 30 });
+    finish(game);
   },
 
   // The Halcyon Trust job: holding the lobby against SBPD at sunset.
@@ -92,6 +124,7 @@ const SHOTS = {
     game.startPlaying();
     game.sky.setHour(18.5);
     game.money = 9870;
+    veteran(game, 5310, { plates: 40, fix: 12 });
     game.weapons.give('smg', 240);
     game.weapons.select('smg');
     const b = LOCATIONS.bank;
@@ -99,6 +132,7 @@ const SHOTS = {
     game.player.armor = 60; game.player.health = 72;
     jumpToStep(game, 4, 'hold');
     game.missions.hold = 8.5;
+    game.wanted.heli.placeOver(b.x, b.z, 8, 70);
     const cop = game.wanted.addPoliceCar(b.x + 14, b.z + 15, -1.2);
     game.wanted.addPoliceCar(b.x - 14, b.z + 17, 1.9);
     game.camera.yaw = 0.2; game.camera.pitch = 0.1;
@@ -112,15 +146,17 @@ const SHOTS = {
     game.weapons.cooldown = 0;
     game.weapons.fire();
     for (const u of game.hostiles.alive().slice(0, 3)) game.effects.tracer(u.x, 1.35, u.z, game.player.x, 1.3, game.player.z, '#9fd0ff');
-    quietBanner(game);
-    game.hud.sayNow([{ who: { name: 'SBPD Dispatch', initials: 'PD', color: '#6ab7ff' }, text: 'Silent alarm at Halcyon Trust! All units respond!' }]);
-    game.hud.update(0); game.minimap.draw(0);
+    game.hud.sayNow([{ who: { ...CAST.nadia }, text: 'Vault timer is running. Hold the lobby, Rae!' }]);
+    const p = game.player.position;
+    frame(game, { x: p.x - 3.4, y: 2.6, z: p.z - 4.6 }, { x: p.x + 5, y: 3.6, z: p.z + 30 });
+    finish(game);
   },
 
   map(game) {
     game.startPlaying();
     game.sky.setHour(18.3);
     game.money = 31200;
+    veteran(game, 4100);
     game.missions.index = 2;
     game.weapons.give('smg', 90);
     game.pickups.stashFound.add(1); game.pickups.stashFound.add(4);
@@ -210,6 +246,47 @@ const SHOTS = {
     while (game.race.active && laps++ < 20) { goTo(game.race.ring.position, true); run(0.3); }
     results.push(`race: ${game.race.best ? `WON ${game.race.best.toFixed(1)}s` : 'not finished'}`);
     const report = `MISSIONTEST ${results.join(' | ')} money=${game.money} weapons=${[...game.weapons.owned]}`;
+    const o = document.getElementById('error-overlay');
+    o.style.display = 'block'; o.textContent += report;
+    console.log(report);
+  },
+
+  // Not a screenshot: checks the pursuit and progression systems through the real loop: HEAT 4
+  // brings the air unit and a roadblock, the roster names every unit, each crew ability does its
+  // job, and rank RP survives a save/load round trip.
+  systemstest(game) {
+    game.newGame();
+    game.godMode = true;
+    const out = [], run = (sec) => { for (let i = 0; i < sec * 30; i++) { game.update(1 / 30); game.input.endFrame(); } };
+    const x = roadCoord(8) + LANE;
+    const car = new Vehicle(game, 'coupe', x, 200, Math.PI);
+    game.vehicles.push(car);
+    game.player.enterVehicle(car);
+    game.wanted.setLevel(4);
+    game.input.down.add('KeyW');
+    let blocked = 0;
+    for (let i = 0; i < 10 * 30; i++) { run(1 / 30); blocked = Math.max(blocked, game.wanted.roadblocks.blocks.length); }
+    out.push(`roadblock seen=${blocked > 0}`);
+    const w = game.wanted;
+    out.push(`heli=${w.heli.active}${w.heli.tracking ? '/lit' : ''} roadblocks=${w.roadblocks.blocks.length} units=${w.roster.units.length}`);
+    out.push(`states=${[...new Set(w.roster.units.map((u) => u.state))].join(',')}`);
+    out.push(`callsigns unique=${new Set(w.roster.units.map((u) => u.callsign)).size === w.roster.units.length}`);
+    game.input.down.clear();
+    const before = w.level;
+    game.input.pressed.add('KeyZ'); run(0.1);
+    out.push(`plates ${before}->${w.level}`);
+    car.health = 40;
+    game.input.pressed.add('KeyX'); run(0.1);
+    out.push(`fix health=${Math.round(car.health)}`);
+    game.input.pressed.add('KeyC'); run(0.1);
+    out.push(`eyesOut=${game.crew.eyesOut} cooldownZ=${Math.ceil(game.crew.cooldowns.plates)}`);
+    game.input.pressed.add('Digit4'); run(0.1);
+    const rp = game.rank.rp;
+    game.rank.award(3000, 'test');
+    out.push(`rank=${game.rank.rank} ${game.rank.title} shotgun=${game.weapons.owned.has('shotgun')}`);
+    writeSave(game); game.rank.rp = 0; applySave(game, readSave());
+    out.push(`save rp ${game.rank.rp === rp + 3000 ? 'OK' : 'LOST'}`);
+    const report = `SYSTEMSTEST ${out.join(' | ')}`;
     const o = document.getElementById('error-overlay');
     o.style.display = 'block'; o.textContent += report;
     console.log(report);

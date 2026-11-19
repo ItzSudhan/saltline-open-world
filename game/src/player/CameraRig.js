@@ -38,8 +38,8 @@ export class CameraRig {
         this.pitch += (0.2 - this.pitch) * Math.min(1, dt * 2);
       }
       dist = 6.6 + Math.min(2.4, Math.abs(v.speed) * 0.05);
-      // Hold C: look back at whoever is chasing you (telephoto, over the bonnet).
-      this.lookBack = input.isDown('KeyC');
+      // Hold Q: look back at whoever is chasing you (telephoto, over the bonnet).
+      this.lookBack = input.isDown('KeyQ');
       if (this.lookBack) {
         this.yaw = v.heading + Math.PI - 0.32;
         this.pitch = 0.13;

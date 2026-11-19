@@ -2,6 +2,7 @@
 // beach road in any car. Beat the clock for prize money; the best time is kept in the save.
 import * as THREE from 'three';
 import { roadCoord } from '../world/CityLayout.js';
+import { RP_FOR } from '../progression/RankSystem.js';
 
 const ROUTE = [[8, 1], [8, 3], [8, 6], [6, 6], [6, 8], [3, 8], [3, 5], [5, 5], [5, 2], [8, 2]]
   .map(([i, j]) => ({ x: roadCoord(i), z: roadCoord(j) }));
@@ -47,6 +48,7 @@ export class StreetRace {
       const record = this.best === null || this.time < this.best;
       if (record) this.best = this.time;
       game.addMoney(PRIZE, true);
+      game.rank?.award(RP_FOR.raceWin + (record ? RP_FOR.raceBest : 0), record ? 'Race won · new best' : 'Race won');
       game.hud.banner('SPRINT WON', `${t}s${record ? ' · new best' : ''} · +$${PRIZE}`);
       game.audio?.missionPass();
     } else {

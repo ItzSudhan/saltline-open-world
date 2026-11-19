@@ -1,4 +1,4 @@
-// Save slots in localStorage: story progress, money, weapons, armour, stashes found, position.
+// Save slots in localStorage: story progress, money, rank RP, weapons, armour, stashes found, position.
 const KEY = 'saltline.save.v1';
 
 export function hasSave() {
@@ -15,7 +15,8 @@ export function writeSave(game) {
     health: pl.health,
     armor: pl.armor,
     weapons: [...game.weapons.owned],
-    ammo: { pistol: game.weapons.ammo.pistol, smg: game.weapons.ammo.smg },
+    ammo: { pistol: game.weapons.ammo.pistol, smg: game.weapons.ammo.smg, shotgun: game.weapons.ammo.shotgun, rifle: game.weapons.ammo.rifle },
+    rp: game.rank.rp,
     stashes: [...game.pickups.stashFound],
     stats: game.stats,
     raceBest: game.race.best,
@@ -40,6 +41,8 @@ export function applySave(game, data) {
   for (const i of data.stashes || []) game.pickups.stashFound.add(i);
   Object.assign(game.stats, data.stats || {});
   game.race.best = data.raceBest ?? null;
+  game.rank.rp = data.rp || 0;
+  game.weapons.unlockForRank(game.rank.rank);
   if (data.hour) game.sky.setHour(data.hour);
   if (data.pos) game.player.place(data.pos.x, data.pos.z);
 }

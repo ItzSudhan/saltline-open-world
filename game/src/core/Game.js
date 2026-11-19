@@ -1,5 +1,7 @@
 // The game: builds the renderer and every system, runs the frame loop, and handles game states
-// (title, playing, paused, down), money, deaths/arrests, explosions and city services.
+// (title, playing, paused, down), money, deaths/arrests, explosions and city services. Rank/RP
+// (progression/), the crew's hotkey abilities (crew/) and the SBPD roster, air unit and
+// roadblocks (police/, owned by WantedSystem) update from here too.
 import * as THREE from 'three';
 import { createRandom } from './Random.js';
 import { Input } from './Input.js';
@@ -8,6 +10,7 @@ import { generateCity } from '../world/CityGenerator.js';
 import { SkyAndLighting } from '../world/SkyAndLighting.js';
 import { LOCATIONS } from '../world/CityLayout.js';
 import { Pickups } from '../world/Pickups.js';
+import { BeachProps } from '../world/BeachProps.js';
 import { PlayerController } from '../player/PlayerController.js';
 import { CameraRig } from '../player/CameraRig.js';
 import { TrafficSystem } from '../ai/TrafficSystem.js';
@@ -24,6 +27,8 @@ import { Minimap } from '../ui/Minimap.js';
 import { Menus } from '../ui/Menus.js';
 import { SoundEngine } from '../audio/SoundEngine.js';
 import { writeSave, readSave, applySave } from '../save/SaveGame.js';
+import { RankSystem } from '../progression/RankSystem.js';
+import { CrewAbilities } from '../crew/CrewAbilities.js';
 
 export class Game {
   constructor(canvas, seed = 1) {
@@ -52,6 +57,7 @@ export class Game {
     this.collision = new CollisionWorld();
     this.sky = new SkyAndLighting(scene, renderer);
     this.city = generateCity(scene, this.collision, this.rand);
+    this.beach = new BeachProps(scene, this.rand);
     this.effects = new Effects(this);
     this.pickups = new Pickups(this);
     this.player = new PlayerController(this);
@@ -63,6 +69,8 @@ export class Game {
     this.weapons = new WeaponSystem(this);
     this.missions = new MissionDirector(this);
     this.race = new StreetRace(this);
+    this.rank = new RankSystem(this);
+    this.crew = new CrewAbilities(this);
     this.hud = new Hud(this);
     this.minimap = new Minimap(this, this.city.footprints);
     this.audio = new SoundEngine(this);
@@ -113,6 +121,7 @@ export class Game {
   newGame() {
     this.money = 500;
     this.missions.index = 0;
+    this.rank.rp = 0;
     this.player.health = 100; this.player.armor = 0;
     this.player.place(LOCATIONS.start.x, LOCATIONS.start.z, Math.PI);
     this.camera.snapBehind(Math.PI);
@@ -213,6 +222,8 @@ export class Game {
         this.money -= 400;
         this.weapons.ammo.pistol += 48;
         if (this.weapons.owned.has('smg')) this.weapons.ammo.smg += 120;
+        if (this.weapons.owned.has('shotgun')) this.weapons.ammo.shotgun += 24;
+        if (this.weapons.owned.has('rifle')) this.weapons.ammo.rifle += 90;
         pl.armor = 100;
         this.hud.updateWeapon();
         this.hud.toast('Locked and loaded');
@@ -244,6 +255,8 @@ export class Game {
       this.sky.setHour(this.sky.hour + dt / 240);
       this.player.update(dt);
       this.weapons.update(dt);
+      this.crew.update(dt);
+      this.rank.update(dt);
       this.services();
     } else if (this.state === 'paused') {
       if (input.wasPressed('Escape') || input.wasPressed('KeyP') || input.wasPressed('KeyM')) this.resume();

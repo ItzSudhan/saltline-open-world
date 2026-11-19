@@ -50,7 +50,15 @@ export class Minimap {
   collectBlips() {
     const game = this.game, out = [];
     const flash = Math.floor(this.t * 4) % 2 === 0;
-    for (const v of game.wanted.cars) if (!v.wrecked) out.push({ x: v.x, z: v.z, color: flash ? '#ff2a4a' : '#3a7bff', size: 5 });
+    // SBPD units: only those close enough to hear, unless Pip's scanner feed (Eyes Out) is live,
+    // which shows every cruiser, roadblock and the air unit, pinned to the rim when off the map.
+    const eyes = game.crew.eyesOut, p = game.player.position;
+    const near = (x, z) => eyes || Math.hypot(x - p.x, z - p.z) < 70;
+    const kind = eyes ? 'police' : null;
+    for (const v of game.wanted.cars) if (!v.wrecked && near(v.x, v.z)) out.push({ x: v.x, z: v.z, color: flash ? '#ff2a4a' : '#3a7bff', size: 5, kind });
+    for (const v of game.wanted.roadblocks.cars) if (near(v.x, v.z)) out.push({ x: v.x, z: v.z, color: '#ff6bd0', size: 5, label: '‖', kind });
+    const heli = game.wanted.heli;
+    if (heli.active && !heli.leaving && near(heli.x, heli.z)) out.push({ x: heli.x, z: heli.z, color: '#fff3b0', size: 6, label: 'H', kind });
     for (const u of game.hostiles.units) if (!u.dead) out.push({ x: u.x, z: u.z, color: u.team === 'police' ? '#6ab7ff' : '#ff4d3d', size: 3.5 });
     for (const it of game.pickups.items) if (it.kind === 'stash') out.push({ x: it.x, z: it.z, color: '#19d3c5', size: 3, faint: true });
     out.push({ x: LANDMARKS_POS.gunshop.x, z: LANDMARKS_POS.gunshop.z, color: '#9be08f', size: 4.5, label: '$' });
@@ -85,7 +93,7 @@ export class Minimap {
       let sx = mx * cos - mz * sin, sy = mx * sin + mz * cos;
       const d = Math.hypot(sx, sy);
       if (d > R - 10) {
-        if (b.kind !== 'objective' && b.kind !== 'contact') continue;
+        if (b.kind !== 'objective' && b.kind !== 'contact' && b.kind !== 'police') continue;
         sx *= (R - 10) / d; sy *= (R - 10) / d;
       }
       this.blip(g, R + sx, R + sy, b);
@@ -99,6 +107,14 @@ export class Minimap {
     g.beginPath(); g.moveTo(9, 0); g.lineTo(-7, -6); g.lineTo(-4, 0); g.lineTo(-7, 6); g.closePath();
     g.fill(); g.stroke();
     g.restore();
+    // Eyes Out: a pulsing scanner ring around the rim.
+    if (game.crew.eyesOut) {
+      g.strokeStyle = `rgba(25, 211, 197, ${0.55 + Math.sin(this.t * 6) * 0.35})`; g.lineWidth = 6;
+      g.beginPath(); g.arc(R, R, R - 3, 0, Math.PI * 2); g.stroke();
+      const sweep = this.t * 2.5;
+      g.fillStyle = 'rgba(25, 211, 197, .16)';
+      g.beginPath(); g.moveTo(R, R); g.arc(R, R, R, sweep, sweep + 0.6); g.closePath(); g.fill();
+    }
     // North marker.
     const nx = R + Math.sin(-rot) * 0 + (R - 12) * Math.cos(rot - Math.PI / 2), ny = R + (R - 12) * Math.sin(rot - Math.PI / 2);
     g.fillStyle = '#10131c'; g.beginPath(); g.arc(nx, ny, 9, 0, Math.PI * 2); g.fill();

@@ -5,7 +5,7 @@ import { TRAFFIC_MIX, CAR_TYPES } from '../vehicles/CarModels.js';
 import { GRID, LANE, ROAD_HALF, roadCoord } from '../world/CityLayout.js';
 
 const DIRS = [{ x: 1, z: 0 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 0, z: -1 }];
-const TARGET_CARS = 26;
+const TARGET_CARS = 32;
 
 export const laneRight = (d) => ({ x: -d.z, z: d.x });
 export const nodePos = (i, j) => ({ x: roadCoord(i), z: roadCoord(j) });

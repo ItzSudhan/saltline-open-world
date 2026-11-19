@@ -5,8 +5,13 @@ import { Vehicle } from '../vehicles/CarPhysics.js';
 import { GRID, roadCoord, roadIndexNear, LANE } from '../world/CityLayout.js';
 import { nodePos } from '../ai/TrafficSystem.js';
 import { clamp, wrapAngle } from '../core/Random.js';
+import { Helicopter } from './Helicopter.js';
+import { Roadblocks } from './Roadblocks.js';
+import { PoliceRoster } from './PoliceRoster.js';
+import { RP_FOR } from '../progression/RankSystem.js';
 
 const CRIME_HEAT = { carjack: 0.8, assault: 1.3, runover: 1.3, gunfire: 0.25, copcar: 2.2, copkill: 3.2, explosion: 1.6 };
+const CRIME_LABEL = { carjack: 'Carjacking', assault: 'Assault', runover: 'Hit and run', copcar: 'Cruiser damaged', copkill: 'Officer down', explosion: 'Explosion' };
 const LEVEL_AT = [0.5, 3, 7, 12, 19];
 const CARS_FOR_LEVEL = [0, 1, 2, 3, 4, 5];
 
@@ -20,7 +25,14 @@ export class WantedSystem {
     this.spawnT = 0;
     this.bustT = 0;
     this.lastX = 0; this.lastZ = 0;
+    this.heli = new Helicopter(game);
+    this.roadblocks = new Roadblocks(game);
+    this.roster = new PoliceRoster(game);
+    this.crimeRpT = 0;
   }
+
+  // Evade progress 0..1 while out of sight (for the HUD).
+  get evadeFrac() { return this.level ? Math.min(1, this.evadeT / (7 + this.level * 2.5)) : 0; }
 
   get level() { let l = 0; for (const t of LEVEL_AT) if (this.points >= t) l++; return l; }
   get evading() { return this.level > 0 && !this.seen; }
@@ -31,6 +43,16 @@ export class WantedSystem {
     this.points = Math.min(26, this.points + (CRIME_HEAT[kind] || 0.5));
     if (kind === 'gunfire' && this.points < LEVEL_AT[0]) this.points = Math.min(this.points, LEVEL_AT[0] - 0.05);
     if (this.level > before) { this.evadeT = 0; this.lastX = x; this.lastZ = z; this.game.audio?.heatUp(); }
+    // Street cred for crimes, rate-limited so spraying bullets doesn't farm RP.
+    if (RP_FOR[kind] && this.crimeRpT <= 0) { this.game.rank?.award(RP_FOR[kind], CRIME_LABEL[kind]); this.crimeRpT = 1.5; }
+  }
+
+  // A cruiser from elsewhere (a roadblock) joins the pursuit.
+  adopt(v) {
+    v.driver = 'police';
+    v.sirenOn = true;
+    v.police = { waypoint: null, stuckT: 0, reverseT: 0, deployed: false, state: 'PURSUING' };
+    if (!this.cars.includes(v)) this.cars.push(v);
   }
 
   setLevel(n) {
@@ -44,6 +66,8 @@ export class WantedSystem {
     this.points = 0;
     for (const v of this.cars) { v.sirenOn = false; v.driver = null; v.ai = null; this.game.traffic.cars.push(v); }
     this.cars = [];
+    this.roadblocks.clear();
+    this.heli.dismiss();
   }
 
   spawnPoliceCar(nearX, nearZ, minD = 110, maxD = 170) {
@@ -62,7 +86,7 @@ export class WantedSystem {
   addPoliceCar(x, z, heading) {
     const v = new Vehicle(this.game, 'police', x, z, heading);
     v.driver = 'police';
-    v.police = { waypoint: null, stuckT: 0, reverseT: 0, deployed: false, i: roadIndexNear(x), j: roadIndexNear(z) };
+    v.police = { waypoint: null, stuckT: 0, reverseT: 0, deployed: false, state: 'RESPONDING' };
     this.game.vehicles.push(v);
     this.cars.push(v);
     return v;
@@ -71,6 +95,7 @@ export class WantedSystem {
   update(dt) {
     const game = this.game, pl = game.player, pp = pl.position;
     const level = this.level;
+    this.crimeRpT -= dt;
     // Wrecks and far-away units leave the pursuit (traffic cleans them up later).
     for (const v of this.cars) {
       if (Math.hypot(v.x - pp.x, v.z - pp.z) > 260) game.traffic.despawn(v);
@@ -87,10 +112,16 @@ export class WantedSystem {
       if (!this.seen) for (const u of game.hostiles.alive()) {
         if (u.team === 'police' && Math.hypot(u.x - pp.x, u.z - pp.z) < 50) { this.seen = true; break; }
       }
+      if (this.heli.tracking) this.seen = true;
       if (this.seen) { this.evadeT = 0; this.lastX = pp.x; this.lastZ = pp.z; }
       else {
         this.evadeT += dt;
-        if (this.evadeT > 7 + level * 2.5) { this.points = 0; game.hud.toast('Heat cooled off'); game.audio?.heatClear(); }
+        if (this.evadeT > 7 + level * 2.5) {
+          this.points = 0;
+          game.hud.toast('Heat cooled off');
+          game.audio?.heatClear();
+          game.rank?.award(80 * level, `Evaded HEAT ${level}`);
+        }
       }
       // Fresh units.
       this.spawnT -= dt;
@@ -105,6 +136,9 @@ export class WantedSystem {
     }
 
     for (const v of this.cars) this.drivePursuit(v, dt);
+    this.heli.update(dt);
+    this.roadblocks.update(dt);
+    this.roster.update();
     this.checkBust(dt);
   }
 
@@ -113,11 +147,26 @@ export class WantedSystem {
     const game = this.game, pp = game.player.position, P = v.police;
     if (v.wrecked) { v.drive(dt, { throttle: 0, brake: 1, steer: 0 }); return; }
     const d = Math.hypot(pp.x - v.x, pp.z - v.z);
-    let tx, tz;
+    const pv = game.player.vehicle;
+    let tx, tz, ram = false;
     if (d < 45 && game.collision.lineOfSight(v.x, v.z, pp.x, pp.z)) {
-      tx = pp.x; tz = pp.z;
       P.waypoint = null;
+      if (pv && d < 16) {
+        // Ramming: aim where the player's car will be in a moment, flat out.
+        P.state = 'RAMMING'; ram = true;
+        tx = pp.x + pv.vx * 0.35; tz = pp.z + pv.vz * 0.35;
+      } else if (pv && v.id % 2 === 1 && Math.hypot(pv.vx, pv.vz) > 6) {
+        // Flanking: odd-numbered units drive for a point beside and ahead of the player.
+        P.state = 'FLANKING';
+        const sp = Math.hypot(pv.vx, pv.vz), fx = pv.vx / sp, fz = pv.vz / sp;
+        const side = v.id % 4 === 1 ? 1 : -1;
+        tx = pp.x + fx * 10 - fz * 5 * side; tz = pp.z + fz * 10 + fx * 5 * side;
+      } else {
+        P.state = pv ? 'PURSUING' : (d < 20 ? 'ARRESTING' : 'PURSUING');
+        tx = pp.x; tz = pp.z;
+      }
     } else {
+      P.state = 'RESPONDING';
       if (!P.waypoint || Math.hypot(P.waypoint.x - v.x, P.waypoint.z - v.z) < 12) {
         // Next intersection: the neighbour of the nearest node that best closes the distance.
         const i = roadIndexNear(v.x), j = roadIndexNear(v.z);
@@ -150,7 +199,7 @@ export class WantedSystem {
     if (Math.abs(v.speed) < 1.2 && c.throttle > 0) P.stuckT += dt; else P.stuckT = 0;
     if (P.stuckT > 1.2) { P.reverseT = 1.1; P.stuckT = 0; }
     if (P.reverseT > 0) { P.reverseT -= dt; c.throttle = 0; c.brake = 1; c.steer = -c.steer; }
-    const maxCap = this.level >= 3 ? 1 : 0.85;
+    const maxCap = this.level >= 3 || ram ? 1 : 0.85;
     c.throttle *= maxCap;
     v.drive(dt, c);
     if (playerOnFoot && d < 22 && Math.abs(v.speed) < 3 && !P.deployed) {

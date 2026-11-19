@@ -10,6 +10,16 @@
 // game/: plain static files (game/index.html and its ES modules, three.js vendored), no network
 // requests.
 //
+// The police response is a roster of named units (police/PoliceRoster.js). Each one has a live
+// behaviour: ramming, flanking, pursuing, responding or holding a roadblock. At HEAT 3 an air
+// unit arrives with a searchlight (police/Helicopter.js), and at HEAT 4 two cruisers park across
+// the road ahead (police/Roadblocks.js). Jobs, races, stashes and crimes earn RP toward ten ranks
+// (progression/RankSystem.js), and ranks unlock a shotgun and a rifle in the five weapon slots.
+// Three crew members have hotkey abilities with cooldowns (crew/CrewAbilities.js): swap plates
+// (-1 HEAT), quick fix (repair the car) and eyes out (police on the minimap). Portraits are
+// painted on canvas (ui/Portraits.js). Sunbreak Beach has umbrellas, towels and beach-goers
+// (world/BeachProps.js), and scooters ride in traffic.
+//
 // This program (Node 22, standard library only) hands the game in. It copies game/ and screenshots/
 // to /output and uses the vendored make.fun library to write /output/dossier.json, the summary the
 // judge reads.

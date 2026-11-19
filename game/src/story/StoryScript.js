@@ -1,14 +1,22 @@
 // The story of Saltline: who's who, and the five jobs that take Rae Castillo from stolen cars
 // to the vault under Halcyon Trust. Missions are data; MissionDirector plays them.
 
+// Each character's `look` is painted into the dialogue portrait by ui/Portraits.js.
 export const CAST = {
-  rae: { name: 'Rae Castillo', initials: 'RC', color: '#ff6b5a' },
-  tide: { name: "Tomas 'Tide' Okafor", initials: 'TO', color: '#ffb347' },
-  nadia: { name: 'Nadia Sol', initials: 'NS', color: '#ff4fa0' },
-  voss: { name: 'Councilman Harlan Voss', initials: 'HV', color: '#9fb4c7' },
-  benny: { name: 'Benny Coral', initials: 'BC', color: '#ff9f1c' },
-  dispatch: { name: 'SBPD Dispatch', initials: 'PD', color: '#6ab7ff' },
-  news: { name: 'Wave 104.2 News', initials: 'FM', color: '#19d3c5' },
+  rae: { name: 'Rae Castillo', initials: 'RC', color: '#ff6b5a', role: 'Ferry pilot · driver',
+    look: { skin: '#c48a62', hair: '#3a1f14', style: 'long', shirt: '#ff6b5a', bg: '#5a2a3a', earring: '#ffd166' } },
+  tide: { name: "Tomas 'Tide' Okafor", initials: 'TO', color: '#ffb347', role: "Fixer · Tide's Garage",
+    look: { skin: '#6b4330', hair: '#1a1210', style: 'buzz', shirt: '#2b5d7b', collar: '#ffb347', bg: '#5a3a14', beard: '#1a1210', smile: true } },
+  nadia: { name: 'Nadia Sol', initials: 'NS', color: '#ff4fa0', role: 'Club owner · The Lantern',
+    look: { skin: '#e8c0a0', hair: '#141016', style: 'bun', shirt: '#5b3a78', bg: '#4a1840', glasses: '#ff4fa0', shades: true, earring: '#ffffff' } },
+  voss: { name: 'Councilman Harlan Voss', initials: 'HV', color: '#9fb4c7', role: 'City council',
+    look: { skin: '#f0c8a8', hair: '#f2f2f2', style: 'short', shirt: '#22252b', collar: '#c3242f', bg: '#2a3442', stern: true } },
+  benny: { name: 'Benny Coral', initials: 'BC', color: '#ff9f1c', role: 'Coral Kings boss',
+    look: { skin: '#a8714f', hair: '#2a1712', style: 'buzz', shirt: '#ff9f1c', bg: '#4a2a10', cap: '#ff9f1c', capBadge: '#19d3c5', stern: true } },
+  dispatch: { name: 'SBPD Dispatch', initials: 'PD', color: '#6ab7ff', role: 'Saltline Bay PD',
+    look: { skin: '#d9a07a', hair: '#2a2420', style: 'bun', shirt: '#1d3f8a', collar: '#ffffff', bg: '#14264a', headset: true } },
+  news: { name: 'Wave 104.2 News', initials: 'FM', color: '#19d3c5', role: 'Radio news',
+    look: { skin: '#8a5a3c', hair: '#120c0a', style: 'curly', shirt: '#19d3c5', bg: '#0f3a40', headset: true, smile: true } },
 };
 
 export const MISSIONS = [
@@ -109,3 +117,11 @@ export const MISSIONS = [
 ];
 
 export const RADIO_STATIONS = ['Wave 104.2 Saltwater FM', 'KORL 88.1 Coral Heat', 'Low Tide Lounge 97.5', 'Radio Off'];
+
+// Fictional tracks each station rotates through.
+export const RADIO_SONGS = [
+  ['The Low Reefs – Glass Harbor', 'Mira Vance – Neon Undertow', 'Saltwater Saints – Ferry at Dusk', 'Pelican Static – Heatwave Hotel'],
+  ['DJ Coralline – Bassline Tide', 'Kid Marrow – Six Lanes', 'Brineboys – Palm Row Anthem'],
+  ['June Ashby – Slow Swell', 'The Quiet Keys – Lantern Light', 'Oro Bay Trio – 2 A.M. Boardwalk'],
+  [],
+];

@@ -76,6 +76,7 @@ export class Pickups {
     else if (it.kind === 'stash') {
       this.stashFound.add(it.index);
       game.addMoney(it.amount);
+      game.rank?.award(150, 'Salt Stash found');
       game.hud.toast(`Salt Stash ${this.stashFound.size}/${STASH_SPOTS.length} found`);
     }
     game.audio?.pickup();

@@ -136,7 +136,8 @@ export class Vehicle {
     for (const w of this.parts.wheels) w.rotation.x = this.wheelSpin;
     for (const p of this.parts.steerPivots) p.rotation.y = this.steer;
     // Body roll in corners.
-    m.rotation.z = clamp(-this.yawRate * Math.abs(this.speed) * 0.004, -0.06, 0.06);
+    m.rotation.z = clamp(-this.yawRate * Math.abs(this.speed) * (this.type.twoWheel ? 0.03 : 0.004), -0.06, 0.06) * (this.type.twoWheel ? 4 : 1);
+    if (this.parts.rider) this.parts.rider.visible = this.driver === 'ai';
     if (this.parts.lightbar && this.sirenOn && !this.wrecked) {
       this.lightTimer += dt;
       const on = Math.floor(this.lightTimer * 6) % 2 === 0;

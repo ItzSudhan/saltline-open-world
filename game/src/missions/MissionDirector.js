@@ -5,6 +5,8 @@ import { MISSIONS, CAST } from '../story/StoryScript.js';
 import { LOCATIONS } from '../world/CityLayout.js';
 import { Vehicle } from '../vehicles/CarPhysics.js';
 
+const OBJECTIVE_TYPES = new Set(['enterCar', 'deliver', 'goto', 'destroy', 'eliminate', 'hold', 'loseWanted']);
+
 function makeMarker(color) {
   const g = new THREE.Group();
   const ring = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1.6, 32, 1, true),
@@ -38,6 +40,21 @@ export class MissionDirector {
 
   get next() { return MISSIONS[this.index] || null; }
   get step() { return this.active ? this.active.steps[this.stepIdx] : null; }
+  get total() { return MISSIONS.length; }
+
+  // The player-facing stages of the active job (objectives, not scripted beats): number, title,
+  // which stage is current, progress within it (hold timers), and the text of the next stage.
+  stageInfo() {
+    const m = this.active;
+    if (!m) return null;
+    const stages = m.steps.map((s, i) => ({ s, i })).filter(({ s }) => OBJECTIVE_TYPES.has(s.type));
+    let cur = stages.findIndex(({ i }) => i >= this.stepIdx);
+    if (cur < 0) cur = stages.length - 1;
+    const s = this.step;
+    const within = s?.type === 'hold' ? Math.min(1, this.hold / s.seconds) : 0;
+    const nextStage = stages[cur + 1];
+    return { num: MISSIONS.indexOf(m) + 1, title: m.title.toUpperCase(), stage: cur + 1, stages: stages.length, within, next: nextStage?.s.text || null };
+  }
 
   loc(name) { return LOCATIONS[name]; }
 
@@ -125,7 +142,9 @@ export class MissionDirector {
   pass() {
     const game = this.game, m = this.active;
     game.addMoney(m.reward, true);
-    game.hud.banner('MISSION PASSED', `+$${m.reward.toLocaleString()}  ·  ${m.unlock}`);
+    const rp = 300 + Math.round(m.reward / 8);
+    game.rank?.award(rp, m.title);
+    game.hud.banner('MISSION PASSED', `+$${m.reward.toLocaleString()}  ·  +${rp} RP  ·  ${m.unlock}`);
     game.hud.say(m.outro.map(([who, text]) => ({ who: CAST[who], text })));
     game.audio?.missionPass();
     if (m.give?.weapon) { game.weapons.give(m.give.weapon, m.give.ammo); game.weapons.select(m.give.weapon); }

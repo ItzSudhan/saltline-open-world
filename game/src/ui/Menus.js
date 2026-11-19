@@ -46,6 +46,8 @@ export class Menus {
       `Cars stolen <b>${s.cars}</b> &middot; Cops dropped <b>${s.cops}</b>`,
       `Sunbreak Sprint best <b>${game.race.best ? `${game.race.best.toFixed(1)}s` : 'not raced'}</b>`,
       `Arsenal <b>${[...game.weapons.owned].map((w) => w.toUpperCase()).join(' · ')}</b>`,
+      `Rank <b>${game.rank.rank} · ${game.rank.title}</b> (${game.rank.rp.toLocaleString('en-US')} RP)`,
+      'Crew <b>Juno</b> plates · <b>Dex</b> repairs · <b>Pip</b> scanner',
     ].join('<br>');
     $('legend').innerHTML = [
       ['#ffd166', 'Objective'], ['#19d3c5', 'Salt Stash'], ['#ffb347', "Tide's Garage (repair, cool heat)"],

@@ -1,7 +1,9 @@
-// The on-screen HUD: money, clock, HEAT meter, health/armour, speedometer, weapon, objective,
-// mission timer, dialogue box with portraits, banners, toasts and prompts.
+// The on-screen HUD: money, clock, health/armour with numbers, speedometer, objective, mission
+// timer, dialogue box with painted portraits, banners, toasts and prompts. The data panels
+// (police roster, HEAT, rank, crew, weapon bar, mission stages) live in HudPanels.
 import { districtAt } from '../world/CityLayout.js';
-import { RADIO_STATIONS } from '../story/StoryScript.js';
+import { HudPanels } from './HudPanels.js';
+import { paintInto } from './Portraits.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -9,12 +11,12 @@ export class Hud {
   constructor(game) {
     this.game = game;
     this.el = {};
-    for (const id of ['hud', 'mission-title', 'objective-text', 'mission-timer', 'hold-bar', 'hold-fill', 'clock', 'money', 'heat', 'heat-pips',
-      'weapon-name', 'weapon-ammo', 'district-name', 'health-fill', 'armor-fill', 'speedo', 'speed-value', 'vehicle-name', 'radio-name',
-      'crosshair', 'prompt', 'dialogue', 'dialogue-portrait', 'dialogue-speaker', 'dialogue-text', 'banner', 'banner-title', 'banner-sub',
+    for (const id of ['hud', 'mission-title', 'objective-text', 'mission-timer', 'hold-bar', 'hold-fill', 'clock', 'money',
+      'district-name', 'health-fill', 'armor-fill', 'health-num', 'armor-num', 'speedo', 'speed-value', 'vehicle-name',
+      'crosshair', 'prompt', 'dialogue', 'dialogue-portrait', 'dialogue-speaker', 'dialogue-role', 'dialogue-text', 'banner', 'banner-title', 'banner-sub',
       'toast', 'damage-flash']) this.el[id] = $(id);
-    this.el['heat-pips'].innerHTML = '<span class="pip"></span>'.repeat(5);
-    this.pips = [...this.el['heat-pips'].children];
+    this.panels = new HudPanels(game);
+    this.panelT = 0;
     this.shownMoney = 0;
     this.lines = [];
     this.lineT = 0;
@@ -40,7 +42,7 @@ export class Hud {
     const el = this.el['mission-timer'];
     if (sec === null || sec === undefined) { el.textContent = ''; return; }
     const s = Math.max(0, Math.ceil(sec));
-    el.textContent = `⏱ ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     el.style.color = s < 20 ? '#ff6b5a' : '#fff';
   }
 
@@ -59,9 +61,9 @@ export class Hud {
     const box = this.el.dialogue;
     if (!line) { box.classList.remove('show'); this.lineT = 0; return; }
     box.classList.add('show');
-    this.el['dialogue-portrait'].textContent = line.who.initials;
-    this.el['dialogue-portrait'].style.background = line.who.color;
+    paintInto(this.el['dialogue-portrait'], line.who.look || { bg: line.who.color, shirt: line.who.color });
     this.el['dialogue-speaker'].textContent = line.who.name;
+    this.el['dialogue-role'].textContent = line.who.role || '';
     this.el['dialogue-text'].textContent = line.text;
     this.lineT = 2.4 + line.text.length * 0.045;
   }
@@ -82,11 +84,10 @@ export class Hud {
   hitMarker(hit) { if (hit) { this.el.crosshair.classList.add('hit'); this.hitT = 0.15; } }
   showVehicleName(name) { this.el['vehicle-name'].textContent = name; this.vehicleNameT = 4; }
 
-  updateWeapon() {
-    const w = this.game.weapons;
-    this.el['weapon-name'].textContent = w.current.name;
-    this.el['weapon-ammo'].textContent = w.current.melee ? '' : w.ammo[w.current.id];
-  }
+  updateWeapon() { this.panels.updateWeapons(); }
+
+  // Refresh everything at once (used when a staged scene freezes the frame).
+  refreshAll() { this.panelT = 0; this.update(0); this.panels.update(0); this.panels.updateWeapons(); }
 
   update(dt) {
     const game = this.game, pl = game.player, el = this.el;
@@ -97,21 +98,20 @@ export class Hud {
     el.money.textContent = `$${Math.round(this.shownMoney).toLocaleString('en-US')}`;
     const h = game.sky.hour, hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
     el.clock.textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-    const level = game.wanted.level;
-    this.pips.forEach((p, i) => p.classList.toggle('on', i < level));
-    el.heat.classList.toggle('flash', game.wanted.evading);
-    el['health-fill'].style.width = `${pl.health}%`;
+    el['health-fill'].style.width = `${Math.max(0, pl.health)}%`;
     el['armor-fill'].style.width = `${pl.armor}%`;
+    el['health-num'].textContent = Math.max(0, Math.round(pl.health));
+    el['armor-num'].textContent = Math.round(pl.armor);
     // Driving vs on foot.
     const v = pl.vehicle;
     el.speedo.style.display = v ? 'block' : 'none';
-    document.getElementById('weapon').style.visibility = v ? 'hidden' : 'visible';
     el.crosshair.style.display = v || pl.dead || game.weapons.current.melee ? 'none' : 'block';
     if (v) {
       el['speed-value'].textContent = Math.round(Math.abs(v.speed) * 3.6);
-      el['vehicle-name'].textContent = v.type.name;
-      el['radio-name'].textContent = `♪ ${RADIO_STATIONS[game.audio?.station ?? 0]}`;
+      el['vehicle-name'].textContent = v.type.name.toUpperCase();
     }
+    this.panelT -= dt;
+    if (this.panelT <= 0) { this.panelT = 0.15; this.panels.update(0.15); }
     // District name when it changes.
     const d = districtAt(pl.position.x, pl.position.z).name;
     if (d !== this.district) { this.district = d; this.districtT = 5; el['district-name'].textContent = d; }

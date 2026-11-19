@@ -13,34 +13,57 @@
 <canvas id="view" aria-label="Saltline: third-person open-world city"></canvas>
 
 <div id="hud" class="hidden">
-  <div id="objective-panel">
-    <div id="mission-title"></div>
-    <div id="objective-text"></div>
-    <div id="mission-timer"></div>
-    <div id="hold-bar"><div id="hold-fill"></div></div>
+  <div id="left-col">
+    <div id="objective-panel">
+      <div id="mission-head"><span id="mission-num"></span><span id="mission-title"></span></div>
+      <div id="objective-text"></div>
+      <div id="stage-row"><span id="stage-label"></span><div id="stage-bar"><div id="stage-fill"></div></div><span id="mission-timer"></span></div>
+      <div id="hold-bar"><div id="hold-fill"></div></div>
+      <div id="next-line"></div>
+    </div>
+    <div id="police-panel" class="panel">
+      <div class="panel-head"><span>SBPD RESPONSE</span><span id="police-summary"></span></div>
+      <div id="police-list"></div>
+    </div>
   </div>
   <div id="topright">
     <div id="clock">17:30</div>
     <div id="money">$0</div>
-    <div id="heat"><span class="heat-label">HEAT</span><span id="heat-pips"></span></div>
-    <div id="weapon"><span id="weapon-name">FISTS</span><span id="weapon-ammo"></span></div>
+    <div id="rank-box">
+      <div id="rank-line"><b id="rank-num">RANK 1</b><span id="rank-title"></span></div>
+      <div id="rank-bar"><div id="rank-fill"></div></div>
+      <div id="rank-rp"></div>
+    </div>
+    <div id="heat">
+      <div class="heat-word">HEAT<span id="heat-level">0</span></div>
+      <div id="heat-flames"></div>
+      <div id="heat-status"></div>
+    </div>
+    <div id="rp-feed"></div>
+  </div>
+  <div id="crew-panel" class="panel">
+    <div class="panel-head"><span>CREW</span><span>Z · X · C</span></div>
+    <div id="crew-list"></div>
   </div>
   <div id="minimap-wrap">
     <canvas id="minimap" width="240" height="240"></canvas>
     <div id="district-name"></div>
     <div class="bars">
-      <div class="bar"><div id="health-fill"></div></div>
-      <div class="bar armor"><div id="armor-fill"></div></div>
+      <div class="bar"><div id="health-fill"></div><span class="bar-label">HP <b id="health-num">100</b></span></div>
+      <div class="bar armor"><div id="armor-fill"></div><span class="bar-label">ARMOUR <b id="armor-num">0</b></span></div>
     </div>
   </div>
   <div id="speedo">
     <div id="speed-value">0</div><div class="speed-unit">KM/H</div>
-    <div id="vehicle-name"></div>
+    <div id="vehicle-line"><span id="vehicle-name"></span><span id="vehicle-dmg"></span></div>
+    <div id="dmg-bar"><div id="dmg-fill"></div></div>
     <div id="radio-name"></div>
+    <div id="radio-song"></div>
   </div>
+  <div id="weapon-bar"></div>
   <div id="crosshair"></div>
   <div id="prompt"></div>
-  <div id="dialogue"><div id="dialogue-portrait"></div><div><div id="dialogue-speaker"></div><div id="dialogue-text"></div></div></div>
+  <div id="dialogue"><canvas id="dialogue-portrait" width="96" height="96"></canvas><div><div id="dialogue-speaker"></div><div id="dialogue-role"></div><div id="dialogue-text"></div></div></div>
   <div id="banner"><div id="banner-title"></div><div id="banner-sub"></div></div>
   <div id="toast"></div>
   <div id="damage-flash"></div>
@@ -56,8 +79,9 @@
       <button data-action="controls">Controls</button>
     </div>
     <div class="controls-help hidden" id="controls-help">
-      <b>On foot</b> WASD move &middot; Shift sprint &middot; Mouse look &middot; LMB shoot/punch &middot; RMB aim &middot; 1-3 / wheel weapons<br>
-      <b>Driving</b> W/S throttle &amp; brake &middot; A/D steer &middot; Space handbrake &middot; C look back &middot; R radio &middot; H horn<br>
+      <b>On foot</b> WASD move &middot; Shift sprint &middot; Mouse look &middot; LMB shoot/punch &middot; RMB aim &middot; 1-5 / wheel weapons<br>
+      <b>Driving</b> W/S throttle &amp; brake &middot; A/D steer &middot; Space handbrake &middot; Q look back &middot; R radio &middot; H horn<br>
+      <b>Crew</b> Z swap plates (-1 heat) &middot; X quick fix (repair car) &middot; C eyes out (police on minimap)<br>
       <b>Any time</b> F enter / steal / exit car &middot; E interact &middot; M map &middot; Esc pause
     </div>
   </div>

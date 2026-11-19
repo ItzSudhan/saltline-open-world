@@ -18,9 +18,11 @@ export const CAR_TYPES = {
   kestrel: { name: 'Kestrel GT', len: 4.5, wid: 1.95, h: 1.2, maxSpeed: 58, accel: 24, grip: 9, sporty: true, colors: ['#d7263d'] },
   courier: { name: 'Sable Interceptor', len: 4.8, wid: 1.95, h: 1.35, maxSpeed: 50, accel: 18, grip: 8, colors: ['#15171c'] },
   police: { name: 'SBPD Pursuit', len: 4.8, wid: 1.95, h: 1.45, maxSpeed: 52, accel: 19, grip: 8.5, colors: ['#f4f6f8'] },
+  scooter: { name: 'Puffin 125', len: 1.9, wid: 0.75, h: 1.1, maxSpeed: 25, accel: 11, grip: 9, twoWheel: true,
+    colors: ['#8ff7ec', '#ffd166', '#ff9db0', '#ffffff', '#9fe3a0'] },
 };
 
-export const TRAFFIC_MIX = ['sedan', 'sedan', 'sedan', 'suv', 'suv', 'taxi', 'pickup', 'coupe'];
+export const TRAFFIC_MIX = ['sedan', 'sedan', 'sedan', 'suv', 'suv', 'taxi', 'pickup', 'coupe', 'scooter', 'scooter'];
 
 const glassMat = new THREE.MeshPhongMaterial({ color: '#1b2633', shininess: 120, specular: 0x99bbdd });
 const tyreMat = new THREE.MeshLambertMaterial({ color: '#17181b' });
@@ -79,14 +81,55 @@ export function buildCarMesh(typeKey, color) {
     if (o.userData.steer) parts.steerPivots.push(o);
     if (o.userData.lb) { o.material = o.material.clone(); lb[o.userData.lb] = o.material; }
     if (o.userData.glow) { o.material = o.material.clone(); lb[o.userData.glow] = o; }
+    if (o.userData.rider) parts.rider = o;
   });
   if (lb.red) parts.lightbar = { red: lb.red, blue: lb.blue, glowRed: lb.glowRed, glowBlue: lb.glowBlue };
   return { group, parts };
 }
 
+// A step-through scooter facing +z, with a helmeted rider (shown while an AI rides it).
+function buildScooterTemplate() {
+  const g = new THREE.Group();
+  const bodyMat = TEMPLATE_PAINT;
+  box(0.5, 0.12, 1.3, trimMat, 0, 0.38, -0.05, g);                     // floorboard
+  box(0.56, 0.45, 0.8, bodyMat, 0, 0.62, -0.45, g);                    // rear body
+  box(0.5, 0.12, 0.7, new THREE.MeshLambertMaterial({ color: '#2a1d16' }), 0, 0.9, -0.4, g); // seat
+  const stem = box(0.42, 0.75, 0.16, bodyMat, 0, 0.75, 0.62, g);       // leg shield
+  stem.rotation.x = -0.25;
+  box(0.66, 0.06, 0.06, trimMat, 0, 1.18, 0.6, g, false);              // handlebar
+  box(0.22, 0.14, 0.08, headMat, 0, 1.05, 0.74, g, false);
+  box(0.2, 0.08, 0.06, tailMat, 0, 0.78, -0.88, g, false);
+  mergeByMaterial(g, bodyMat);
+  const rider = new THREE.Group();
+  rider.userData.rider = true;
+  const shirt = new THREE.MeshLambertMaterial({ color: '#3f6f9f' });
+  const skin = new THREE.MeshLambertMaterial({ color: '#c98d66' });
+  const helmet = new THREE.MeshLambertMaterial({ color: '#f4f6f8' });
+  box(0.42, 0.55, 0.26, shirt, 0, 1.28, -0.3, rider).rotation.x = 0.2;
+  box(0.36, 0.2, 0.5, new THREE.MeshLambertMaterial({ color: '#22252b' }), 0, 1.0, -0.15, rider);
+  for (const s of [-1, 1]) box(0.1, 0.1, 0.55, skin, s * 0.24, 1.3, 0.12, rider, false).rotation.x = 0.35;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), helmet);
+  head.position.set(0, 1.72, -0.22);
+  head.castShadow = true;
+  rider.add(head);
+  g.add(rider);
+  for (const sz of [0.66, -0.68]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(0, 0.26, sz);
+    const wheel = new THREE.Mesh(wheelComboGet(), [tyreMat, rimMat]);
+    wheel.scale.setScalar(0.68);
+    wheel.userData.wheel = true;
+    pivot.userData.steer = sz > 0;
+    pivot.add(wheel);
+    g.add(pivot);
+  }
+  return g;
+}
+
 // Builds a car facing +z.
 function buildCarTemplate(typeKey) {
   const t = CAR_TYPES[typeKey];
+  if (t.twoWheel) return buildScooterTemplate();
   const g = new THREE.Group();
   const bodyMat = TEMPLATE_PAINT;
   const L = t.len, W = t.wid, H = t.h;
@@ -147,7 +190,7 @@ function buildCarTemplate(typeKey) {
     glowTex ||= makePuffTexture();
     const glow = (color, x) => {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
-      s.scale.setScalar(2.4);
+      s.scale.setScalar(3.4);
       s.position.set(x, roofY + 0.1, cabinZ);
       g.add(s);
       return s;

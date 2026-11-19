@@ -6,7 +6,7 @@ import { wrapAngle } from '../core/Random.js';
 
 const INSET = 10.4;
 const SIDE = 80 - INSET * 2;
-const TARGET = 42;
+const TARGET = 64;
 
 function perimeterPoint(bi, bj, s) {
   const x0 = roadCoord(bi) + INSET, z0 = roadCoord(bj) + INSET;
@@ -55,6 +55,15 @@ export class PedestrianSystem {
 
   spawnOnBeach(z) {
     const rand = this.game.rand;
+    // Half the beach crowd settles by an umbrella and looks out to sea; the rest stroll the sand.
+    const spots = this.game.beach?.spots || [];
+    if (spots.length && rand.chance(0.5)) {
+      let best = spots[0];
+      for (const s of spots) if (Math.abs(s.z - z) < Math.abs(best.z - z)) best = s;
+      const ped = this.create(randomLook(rand), best.x + (rand.next() - 0.5) * 1.5, best.z + (rand.next() - 0.5) * 1.5);
+      Object.assign(ped, { beach: true, idle: true, dir: 1, speed: 1, heading: Math.PI / 2 + (rand.next() - 0.5) * 1.6 });
+      return ped;
+    }
     const ped = this.create(randomLook(rand), BEACH_START + 6 + rand.next() * 60, z);
     Object.assign(ped, { beach: true, dir: rand.chance(0.5) ? 1 : -1, speed: 1 + rand.next() * 0.5 });
     return ped;
@@ -69,7 +78,7 @@ export class PedestrianSystem {
 
   spawnNear(px, pz) {
     const rand = this.game.rand;
-    if (px > BEACH_START - 30 && rand.chance(0.5)) return this.spawnOnBeach(pz + (rand.next() - 0.5) * 220);
+    if (px > BEACH_START - 90 && rand.chance(px > BEACH_START - 30 ? 0.6 : 0.3)) return this.spawnOnBeach(pz + (rand.next() - 0.5) * 220);
     const bi = Math.min(GRID - 1, Math.max(0, blockIndexAt(px) + rand.int(-1, 1)));
     const bj = Math.min(GRID - 1, Math.max(0, blockIndexAt(pz) + rand.int(-1, 1)));
     return this.spawnOnBlock(bi, bj, rand.next() * SIDE * 4);
@@ -78,6 +87,7 @@ export class PedestrianSystem {
   flee(ped, fromX, fromZ, time = 6) {
     if (ped.dead) return;
     ped.state = 'flee';
+    ped.idle = false;
     ped.fleeT = time;
     ped.fromX = fromX; ped.fromZ = fromZ;
   }
@@ -147,6 +157,8 @@ export class PedestrianSystem {
           ped.s = nearestPerimeterS(ped.bi, ped.bj, ped.x, ped.z);
         }
       }
+    } else if (ped.beach && ped.idle) {
+      tx = ped.x; tz = ped.z;
     } else if (ped.beach) {
       tx = ped.x; tz = ped.z + ped.dir * 5;
       if (Math.abs(ped.z) > 320) ped.dir = -Math.sign(ped.z);
