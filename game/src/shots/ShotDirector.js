@@ -42,6 +42,7 @@ function veteran(game, rp, { fix = 0, plates = 0, eyes = false } = {}) {
 function finish(game) {
   quietBanner(game);
   game.hud.toastT = 0; game.hud.el.toast.style.display = 'none';
+  game.hud.shownMoney = game.money;
   game.forceDistrict = true;
   game.hud.refreshAll();
   game.minimap.draw(0);
@@ -149,6 +150,41 @@ const SHOTS = {
     game.hud.sayNow([{ who: { ...CAST.nadia }, text: 'Vault timer is running. Hold the lobby, Rae!' }]);
     const p = game.player.position;
     frame(game, { x: p.x - 3.4, y: 2.6, z: p.z - 4.6 }, { x: p.x + 5, y: 3.6, z: p.z + 30 });
+    finish(game);
+  },
+
+  // Aerial, after dark: the ledger run through Halcyon Downtown against the clock, HAWK-1's
+  // searchlight on Rae, cruisers strung out behind and a roadblock waiting a block ahead.
+  night(game) {
+    game.startPlaying();
+    game.sky.setHour(21.6);
+    game.money = 12940;
+    veteran(game, 2280, { plates: 22, eyes: true });
+    jumpToStep(game, 1, 'goto');
+    game.missions.advance();
+    game.missions.timer = 97;
+    const x = 150, z = roadCoord(4) - LANE;
+    for (const s of game.traffic.parkingSpots) if (Math.abs(s.z - z) < 16) s.taken = true;
+    const car = new Vehicle(game, 'kestrel', x, z, -Math.PI / 2);
+    car.vx = -27; car.health = 64;
+    game.vehicles.push(car);
+    game.player.enterVehicle(car);
+    game.camera.snapBehind(-Math.PI / 2);
+    game.player.health = 61; game.player.armor = 20;
+    game.wanted.setLevel(4);
+    const heli = game.wanted.heli;
+    heli.placeOver(car.x, car.z, -36, 6);
+    heli.vx = -27;
+    for (const [ox, oz] of [[8, 0.3], [13, 7.2], [20, 3.5], [31, 7]]) { const c = game.wanted.addPoliceCar(x + ox, z + oz, -Math.PI / 2); c.vx = -27.5; }
+    game.wanted.roadblocks.place(x - 96, roadCoord(4), 'x');
+    game.traffic.spawnCar(4, 4, { x: 1, z: 0 }, 20, 'taxi');
+    game.traffic.spawnCar(3, 4, { x: 1, z: 0 }, 40, 'scooter', '#ff9db0');
+    game.traffic.spawnCar(3, 3, { x: 0, z: 1 }, 30);
+    for (const [bi, bj] of [[3, 3], [4, 3], [3, 4], [4, 4]]) for (let i = 0; i < 4; i++) game.peds.spawnOnBlock(bi, bj, 15 + i * 60);
+    game.input.down.add('KeyW');
+    simulate(game, 0.9, () => { game.wanted.lastX = car.x; game.wanted.lastZ = car.z; });
+    game.hud.sayNow([{ who: { ...CAST.nadia }, text: 'Ninety seconds, sweetheart. Bring me that ledger or don\'t come back.' }]);
+    frame(game, { x: car.x + 52, y: 24, z: car.z + 5 }, { x: car.x - 30, y: 0, z: car.z + 1 });
     finish(game);
   },
 
