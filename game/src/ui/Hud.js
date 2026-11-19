@@ -14,7 +14,7 @@ export class Hud {
     for (const id of ['hud', 'mission-title', 'objective-text', 'mission-timer', 'hold-bar', 'hold-fill', 'clock', 'money',
       'district-name', 'health-fill', 'armor-fill', 'health-num', 'armor-num', 'speedo', 'speed-value', 'vehicle-name',
       'crosshair', 'prompt', 'dialogue', 'dialogue-portrait', 'dialogue-speaker', 'dialogue-role', 'dialogue-text', 'banner', 'banner-title', 'banner-sub',
-      'toast', 'damage-flash', 'stunt']) this.el[id] = $(id);
+      'toast', 'damage-flash', 'stunt', 'speedlines']) this.el[id] = $(id);
     this.stuntT = 0;
     this.panels = new HudPanels(game);
     this.panelT = 0;
@@ -113,8 +113,11 @@ export class Hud {
     const v = pl.vehicle;
     el.speedo.style.display = v ? 'block' : 'none';
     el.crosshair.style.display = v || pl.dead || game.weapons.current.melee ? 'none' : 'block';
+    // Speed lines streak in at the screen edges above ~100 km/h.
+    const kmh = v ? Math.abs(v.speed) * 3.6 : 0;
+    el.speedlines.style.opacity = Math.max(0, Math.min(0.75, (kmh - 100) / 80));
     if (v) {
-      el['speed-value'].textContent = Math.round(Math.abs(v.speed) * 3.6);
+      el['speed-value'].textContent = Math.round(kmh);
       el['vehicle-name'].textContent = v.type.name.toUpperCase();
     }
     this.panelT -= dt;
