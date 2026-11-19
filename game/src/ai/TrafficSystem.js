@@ -123,6 +123,7 @@ export class TrafficSystem {
       this.spawnTimer = 0.15;
       this.spawnNear(p.x, p.z, 70, 230);
     }
+    this.checkGunpoint();
     for (const v of this.cars) {
       if (v.wrecked && v.driver === 'ai') { v.ai = null; v.driver = null; v.vx = v.vz = 0; }
       if (v.driver === 'ai' && v.ai) this.drive(v, dt);
@@ -173,12 +174,38 @@ export class TrafficSystem {
     return best;
   }
 
+  // Sirens or a speeding getaway car bearing down within ~28 m: brake hard and swing toward the
+  // kerb (with a puff of tyre smoke) until it has passed.
+  checkYield(v, a, dt) {
+    a.dodgeT = Math.max(0, (a.dodgeT || 0) - dt);
+    if (a.dodgeT > 0 || a.reckless) return;
+    const pl = this.game.player.vehicle;
+    const threats = this.game.wanted.cars.filter((c) => c.sirenOn && !c.wrecked);
+    if (pl && !pl.wrecked) threats.push(pl);
+    for (const t of threats) {
+      const sp = Math.hypot(t.vx, t.vz);
+      if (sp < (t === pl ? 13 : 8)) continue;
+      const dx = v.x - t.x, dz = v.z - t.z, d = Math.hypot(dx, dz);
+      // Only when it is coming this way (its velocity points at us).
+      if (d > 28 || (dx * t.vx + dz * t.vz) / (sp * d + 1e-6) < 0.55) continue;
+      a.dodgeT = 2.6;
+      if (a.speed > 5) {
+        const f = v.forward();
+        this.game.effects.tyreSmoke(v.x - f.x * 1.6, v.z - f.z * 1.6);
+        if (d < 18) this.game.audio?.horn(v.x, v.z);
+      }
+      return;
+    }
+  }
+
   drive(v, dt) {
     const a = v.ai;
     a.blocked = Math.max(0, a.blocked - dt);
+    this.checkYield(v, a, dt);
     const clear = a.reckless ? 99 : this.clearance(v);
     let want = a.seg.turn ? Math.min(a.cruise, 7.5) : a.cruise;
     if (clear < 18) want = Math.min(want, Math.max(0, (clear - 6) * 1.1));
+    if (a.dodgeT > 0) want = Math.min(want, 2);
     if (a.blocked > 0) want = 0;
     a.speed += Math.max(-14 * dt, Math.min(6 * dt, want - a.speed));
     if (clear < 7 && a.speed < 0.5) {
@@ -196,15 +223,35 @@ export class TrafficSystem {
     const x = u * u * g.ax + 2 * u * t * g.cx + t * t * g.bx;
     const z = u * u * g.az + 2 * u * t * g.cz + t * t * g.bz;
     const tx = 2 * u * (g.cx - g.ax) + 2 * t * (g.bx - g.cx), tz = 2 * u * (g.cz - g.az) + 2 * t * (g.bz - g.cz);
-    const nh = Math.atan2(tx, tz);
+    const lane = Math.atan2(tx, tz);
+    // Swerve offset toward the right-hand kerb while yielding; the nose leads the swing.
+    const target = a.dodgeT > 0 ? 3 : 0;
+    a.off = (a.off || 0) + (target - (a.off || 0)) * Math.min(1, dt * 3.2);
+    const nh = lane - (target - a.off) * 0.32;
     const dh = Math.atan2(Math.sin(nh - v.heading), Math.cos(nh - v.heading));
     v.yawRate = dt > 0 ? dh / dt : 0;
     v.steer = Math.max(-0.5, Math.min(0.5, dh * 8));
     v.heading = nh;
     v.vx = Math.sin(nh) * a.speed; v.vz = Math.cos(nh) * a.speed;
-    v.x = x; v.z = z;
+    v.x = x - Math.cos(lane) * a.off; v.z = z + Math.sin(lane) * a.off;
     v.speed = a.speed;
     v.sync(dt);
+  }
+
+  // Aim a gun at a slow car within 12 m and the driver bails out and runs, leaving it to steal.
+  checkGunpoint() {
+    const pl = this.game.player;
+    if (pl.vehicle || !pl.aiming) return;
+    const yaw = this.game.camera.yaw, fx = Math.sin(yaw), fz = Math.cos(yaw);
+    for (const v of this.cars) {
+      if (v.driver !== 'ai' || !v.ai || v.ai.speed > 7) continue;
+      const dx = v.x - pl.x, dz = v.z - pl.z, d = Math.hypot(dx, dz);
+      if (d > 12 || (dx * fx + dz * fz) / d < 0.85) continue;
+      this.ejectDriver(v);
+      v.bailed = true;
+      this.game.peds.panic(v.x, v.z, 20);
+      this.game.hud.toast(`The driver bailed: the ${v.type.name} is yours`);
+    }
   }
 
   ejectDriver(v) {

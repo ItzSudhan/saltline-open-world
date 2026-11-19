@@ -103,9 +103,10 @@ export class PlayerController {
   tryEnterVehicle() {
     const v = this.nearestVehicle();
     if (!v) return false;
-    if (v.driver === 'ai' || v.driver === 'police') {
-      // Carjacking: the driver is pulled out and runs.
-      this.game.traffic.ejectDriver(v);
+    if (v.driver === 'ai' || v.driver === 'police' || v.bailed) {
+      // Carjacking: the driver is pulled out (or already bailed at gunpoint) and runs.
+      if (!v.bailed) this.game.traffic.ejectDriver(v);
+      v.bailed = false;
       this.game.wanted.reportCrime(v.isPolice ? 'copcar' : 'carjack', v.x, v.z);
       this.game.hud.toast(`Stole a ${v.type.name}`);
       this.game.stats.cars++;
@@ -117,6 +118,7 @@ export class PlayerController {
   enterVehicle(v) {
     this.vehicle = v;
     v.driver = 'player';
+    v.owned = true;
     v.ai = null;
     v.sirenOn = false;
     this.model.root.visible = false;

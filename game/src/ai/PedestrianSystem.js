@@ -184,13 +184,16 @@ export class PedestrianSystem {
     }
     ped.model.root.position.set(ped.x, 0.14, ped.z);
     ped.model.root.rotation.y = ped.heading;
-    ped.model.animate(dt, l > 0.01 ? speed : 0);
+    ped.model.animate(dt, l > 0.01 ? speed : 0, false, false, ped.state === 'flee');
   }
 
   checkCarHits() {
+    const heat = this.game.wanted.level;
     for (const v of this.game.vehicles) {
       const sp = Math.hypot(v.vx, v.vz);
       if (sp < 3) continue;
+      // A pursuit tearing past (sirens, or the wanted getaway car) scatters everyone nearby.
+      const chase = sp > 10 && (v.sirenOn || (v.driver === 'player' && heat > 0));
       for (const ped of this.peds) {
         if (ped.dead) continue;
         const d = Math.hypot(ped.x - v.x, ped.z - v.z);
@@ -198,6 +201,8 @@ export class PedestrianSystem {
           this.game.audio?.thud();
           this.kill(ped, v.driver === 'player', v.vx * 0.6, v.vz * 0.6);
           if (v.driver === 'player') this.game.wanted.reportCrime('runover', ped.x, ped.z);
+        } else if (chase && d < 24 && ped.state !== 'flee') {
+          this.flee(ped, v.x, v.z, 4);
         } else if (d < 12 && v.driver === 'player' && sp > 8) {
           const ahead = ((ped.x - v.x) * v.vx + (ped.z - v.z) * v.vz) / sp;
           if (ahead > 0) this.flee(ped, v.x, v.z, 3);

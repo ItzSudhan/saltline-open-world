@@ -20,6 +20,13 @@
 // painted on canvas (ui/Portraits.js). Sunbreak Beach has umbrellas, towels and beach-goers
 // (world/BeachProps.js), and scooters ride in traffic.
 //
+// The street reacts to a chase: civilian drivers brake and swerve to the kerb for sirens or a
+// speeding getaway car (ai/TrafficSystem.js), and pedestrians run from the pursuit with their hands
+// up (ai/PedestrianSystem.js). If you aim a gun at a slow car, its driver bails out and the car is
+// yours to steal. Threading past traffic at speed pays near-miss combos in cash and RP
+// (activities/NearMiss.js). The pause map lists every story job with its giver and its pay, beside
+// tiles for cash, rank, story progress and HEAT (ui/Menus.js).
+//
 // This program (Node 22, standard library only) hands the game in. It copies game/ and screenshots/
 // to /output and uses the vendored make.fun library to write /output/dossier.json, the summary the
 // judge reads.

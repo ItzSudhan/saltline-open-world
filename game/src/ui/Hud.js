@@ -14,7 +14,8 @@ export class Hud {
     for (const id of ['hud', 'mission-title', 'objective-text', 'mission-timer', 'hold-bar', 'hold-fill', 'clock', 'money',
       'district-name', 'health-fill', 'armor-fill', 'health-num', 'armor-num', 'speedo', 'speed-value', 'vehicle-name',
       'crosshair', 'prompt', 'dialogue', 'dialogue-portrait', 'dialogue-speaker', 'dialogue-role', 'dialogue-text', 'banner', 'banner-title', 'banner-sub',
-      'toast', 'damage-flash']) this.el[id] = $(id);
+      'toast', 'damage-flash', 'stunt']) this.el[id] = $(id);
+    this.stuntT = 0;
     this.panels = new HudPanels(game);
     this.panelT = 0;
     this.shownMoney = 0;
@@ -80,6 +81,12 @@ export class Hud {
 
   toast(text) { this.el.toast.textContent = text; this.el.toast.style.display = 'block'; this.toastT = 2.6; }
   prompt(html) { this.promptText = html; }
+  // Driving bonus popup (near misses), e.g. "NEAR MISS x3" with the cash it paid.
+  stunt(title, sub) {
+    this.el.stunt.innerHTML = `<b>${title}</b><span>${sub}</span>`;
+    this.el.stunt.classList.add('show');
+    this.stuntT = 1.8;
+  }
   flashDamage() { this.el['damage-flash'].style.opacity = 1; setTimeout(() => { this.el['damage-flash'].style.opacity = 0; }, 120); }
   hitMarker(hit) { if (hit) { this.el.crosshair.classList.add('hit'); this.hitT = 0.15; } }
   showVehicleName(name) { this.el['vehicle-name'].textContent = name; this.vehicleNameT = 4; }
@@ -125,8 +132,9 @@ export class Hud {
     // Context prompt (set fresh each frame).
     if (!this.promptText && !v && !pl.dead) {
       const near = pl.nearestVehicle(4.5);
-      if (near) this.promptText = near.driver === 'ai' || near.driver === 'police' ? `<b>F</b> Steal the ${near.type.name}` : `<b>F</b> Get in the ${near.type.name}`;
+      if (near) this.promptText = near.owned ? `<b>F</b> Get in the ${near.type.name}` : `<b>F</b> STEAL <i>${near.type.name}</i>`;
     }
+    if (this.stuntT > 0) { this.stuntT -= dt; if (this.stuntT <= 0) el.stunt.classList.remove('show'); }
     el.prompt.innerHTML = this.promptText;
     el.prompt.style.display = this.promptText ? 'block' : 'none';
     this.promptText = '';

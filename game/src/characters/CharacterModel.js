@@ -57,8 +57,8 @@ export class CharacterModel {
     this.dead = false;
   }
 
-  // speed in m/s; aiming raises the right arm forward.
-  animate(dt, speed, aiming = false, armed = false) {
+  // speed in m/s; aiming raises the right arm forward; panic throws both hands up (fleeing).
+  animate(dt, speed, aiming = false, armed = false, panic = false) {
     if (this.dead) return;
     if (this.sitting) {
       // Breathing and the odd glance around while sitting on the sand.
@@ -74,6 +74,10 @@ export class CharacterModel {
     this.armL.rotation.x = -s * swing * 0.8;
     this.armR.rotation.x = aiming ? -Math.PI / 2 : s * swing * 0.8;
     this.armR.rotation.z = 0;
+    if (panic) {
+      this.armL.rotation.x = -2.7 + s * 0.35;
+      this.armR.rotation.x = -2.7 - s * 0.35;
+    }
     this.body.position.y = Math.abs(Math.cos(this.phase)) * 0.06 * swing;
     this.body.rotation.x = speed > 6 ? 0.12 : 0;
     this.gun.visible = armed;

@@ -39,9 +39,9 @@ function veteran(game, rp, { fix = 0, plates = 0, eyes = false } = {}) {
   if (eyes) { game.crew.use(CREW[2]); game.crew.cooldowns.eyes -= 8; game.crew.eyesOutT -= 8; }
 }
 
-function finish(game) {
+function finish(game, keepToast = false) {
   quietBanner(game);
-  game.hud.toastT = 0; game.hud.el.toast.style.display = 'none';
+  if (!keepToast) { game.hud.toastT = 0; game.hud.el.toast.style.display = 'none'; }
   game.hud.shownMoney = game.money;
   game.forceDistrict = true;
   game.hud.refreshAll();
@@ -83,12 +83,23 @@ const SHOTS = {
       const c = game.wanted.addPoliceCar(x + ox, z + oz, Math.PI); c.vz = -27.5; return c;
     });
     cops[1].heading = Math.PI - 0.08;
-    game.wanted.roadblocks.place(roadCoord(8), z - 52, 'z');
-    game.traffic.spawnCar(8, 2, { x: 0, z: 1 }, 10, 'scooter', '#ffd166');
-    game.traffic.spawnCar(8, 3, { x: 0, z: 1 }, 40, 'taxi');
-    game.traffic.spawnCar(8, 3, { x: 0, z: 1 }, 5, 'scooter', '#8ff7ec');
-    for (let i = 0; i < 26; i++) game.peds.spawnOnBeach(z - 150 + i * 7);
-    for (const [bj, n] of [[3, 5], [4, 6]]) for (let i = 0; i < n; i++) game.peds.spawnOnBlock(7, bj, 30 + i * 41);
+    game.wanted.roadblocks.place(roadCoord(8), z - 92, 'z');
+    // Civilian traffic in both lanes, about to pull over for the pursuit (TrafficSystem.checkYield).
+    const n6 = roadCoord(6);
+    game.traffic.spawnCar(8, 5, { x: 0, z: -1 }, z - 16 - roadCoord(5), 'scooter', '#ffd166');
+    game.traffic.spawnCar(8, 5, { x: 0, z: -1 }, z - 37 - roadCoord(5), 'sedan', '#4fa3ff');
+    game.traffic.spawnCar(8, 6, { x: 0, z: 1 }, n6 - (z - 34), 'coupe', '#ffe08a');
+    game.traffic.spawnCar(8, 6, { x: 0, z: 1 }, n6 - (z - 60), 'taxi');
+    game.traffic.spawnCar(8, 3, { x: 0, z: 1 }, 40, 'pickup');
+    // Evening crowd on the promenade and the Marina Row sidewalk, right where the chase passes.
+    for (let i = 0; i < 30; i++) game.peds.spawnOnBeach(z - 150 + i * 7);
+    for (let i = 0; i < 16; i++) {
+      const ped = game.peds.spawnOnBeach(z - 60 + i * 4.2);
+      ped.x = 333 + (i % 4) * 2.2; ped.idle = false;
+      if (ped.model.sitting) ped.model.setSitting(false);
+    }
+    for (const bj of [5, 6]) for (let i = 0; i < 7; i++) game.peds.spawnOnBlock(7, bj, 59.2 + 4 + i * 8);
+    game.player.vehicle.x -= 0.6;
     game.input.down.add('KeyW');
     simulate(game, 0.9, () => { game.wanted.lastX = car.x; game.wanted.lastZ = car.z; });
     game.hud.sayNow([{ who: { ...CAST.dispatch }, text: 'All units, suspect northbound on Seabreak Parade. HAWK-1 has a light on her.' }]);
@@ -96,28 +107,38 @@ const SHOTS = {
     finish(game);
   },
 
-  // On foot on the Sunbreak promenade: a busy beach, the boardwalk marker, shotgun in hand.
+  // On foot on Seabreak Parade among the promenade crowd: Rae steps into the lane, the Marlin Vela
+  // stops for her, she draws on it, the driver bails with hands up and the car is there to steal.
   street(game) {
     game.startPlaying();
-    game.sky.setHour(17.3);
+    game.sky.setHour(16.9);
     game.money = 7350;
     veteran(game, 3420, { plates: 12 });
     jumpToStep(game, 3, 'goto');
-    const px = 350, pz = 26, bw = LOCATIONS.boardwalk;
-    game.player.place(px, pz, Math.PI);
-    const yaw = Math.atan2(bw.x - px, bw.z - pz) - 0.12;
-    game.camera.yaw = yaw; game.camera.pitch = 0.1; game.player.heading = yaw;
-    game.weapons.select('shotgun');
-    for (let i = 0; i < 46; i++) game.peds.spawnOnBeach(pz - 70 + i * 1.6);
-    for (const [bj, n] of [[3, 6], [4, 4]]) for (let i = 0; i < n; i++) game.peds.spawnOnBlock(7, bj, 20 + i * 47);
-    game.traffic.spawnCar(8, 4, { x: 0, z: -1 }, 18, 'scooter', '#ff9db0');
-    game.traffic.spawnCar(8, 4, { x: 0, z: -1 }, 40, 'coupe');
-    game.traffic.spawnCar(8, 3, { x: 0, z: 1 }, 30, 'sedan');
-    simulate(game, 1.0);
-    game.hud.sayNow([{ who: { ...CAST.tide }, text: 'The Coral Kings run that boardwalk. Benny holds court by the big wheel.' }]);
+    const px = roadCoord(8) + LANE, pz = 18;
+    for (const s of game.traffic.parkingSpots) if (Math.abs(s.x - px) < 16 && s.z > pz - 30 && s.z < pz + 70) s.taken = true;
+    game.player.place(px, pz, 0);
+    game.camera.yaw = 0; game.camera.pitch = 0.1;
+    const car = game.traffic.spawnCar(8, 4, { x: 0, z: -1 }, pz + 26, 'coupe', '#ff4fa0');
+    game.traffic.spawnCar(8, 4, { x: 0, z: -1 }, pz + 58, 'taxi');
+    game.traffic.spawnCar(8, 5, { x: 0, z: 1 }, 80 - pz - 40, 'suv', '#ffd166');
+    for (let i = 0; i < 22; i++) {
+      const ped = game.peds.spawnOnBeach(pz - 4 + i * 2.6);
+      ped.x = 333 + (i % 5) * 1.8; ped.idle = false;
+      if (ped.model.sitting) ped.model.setSitting(false);
+    }
+    for (let i = 0; i < 30; i++) game.peds.spawnOnBeach(pz + i * 3);
+    for (let i = 0; i < 9; i++) game.peds.spawnOnBlock(7, 4, 59.2 + 6 + i * 6);
+    game.weapons.select('smg');
+    simulate(game, 2.4, () => { game.camera.yaw = 0; });
+    game.input.buttons[2] = true;
+    simulate(game, 0.75, () => { game.camera.yaw = 0; });
+    game.player.place(car.x + 2.8, car.z - 2.6, -0.6);
+    simulate(game, 0.1, () => { game.camera.yaw = -0.6; });
+    game.hud.lines = []; game.hud.nextLine();
     const p = game.player.position;
-    frame(game, { x: p.x - 4.5, y: 4.2, z: p.z + 7.5 }, { x: p.x + 16, y: 0.8, z: p.z - 30 });
-    finish(game);
+    frame(game, { x: p.x + 5.2, y: 5.2, z: p.z - 8.2 }, { x: car.x - 1.6, y: 0, z: car.z + 9 });
+    finish(game, true);
   },
 
   // The Halcyon Trust job: holding the lobby against SBPD at sunset.
@@ -149,7 +170,7 @@ const SHOTS = {
     for (const u of game.hostiles.alive().slice(0, 3)) game.effects.tracer(u.x, 1.35, u.z, game.player.x, 1.3, game.player.z, '#9fd0ff');
     game.hud.sayNow([{ who: { ...CAST.nadia }, text: 'Vault timer is running. Hold the lobby, Rae!' }]);
     const p = game.player.position;
-    frame(game, { x: p.x - 3.4, y: 2.6, z: p.z - 4.6 }, { x: p.x + 5, y: 3.6, z: p.z + 30 });
+    frame(game, { x: p.x - 3.2, y: 3.4, z: p.z - 6.8 }, { x: p.x + 9, y: 1.6, z: p.z + 18 });
     finish(game);
   },
 
@@ -197,6 +218,7 @@ const SHOTS = {
     game.weapons.give('smg', 90);
     game.pickups.stashFound.add(1); game.pickups.stashFound.add(4);
     game.stats.cars = 14; game.stats.cops = 3;
+    game.nearMiss.total = 1240;
     game.player.place(LOCATIONS.club.x, LOCATIONS.club.z, 0);
     simulate(game, 0.5);
     game.pause('CITY MAP');
@@ -337,6 +359,33 @@ const SHOTS = {
     game.crew.cooldowns.fix = 0;
     game.input.pressed.add('KeyX'); run(0.1);
     out.push(`spikes flat=${wasFlat} fixed=${!v2.flat}`);
+    // Street reactions: a civilian yields to a speeding getaway, a driver bails at gunpoint and
+    // the car can be stolen, and threading past a scooter pays a near miss.
+    game.player.exitVehicle(true);
+    game.wanted.clear(); game.wanted.roadblocks.clear();
+    const civ = game.traffic.spawnCar(5, 3, { x: 0, z: -1 }, 30, 'sedan');
+    const v3 = new Vehicle(game, 'coupe', civ.x, civ.z + 30, Math.PI);
+    v3.vz = -25; game.vehicles.push(v3); game.player.enterVehicle(v3);
+    run(0.4);
+    out.push(`yield dodge=${civ.ai.dodgeT > 0} off=${civ.ai.off.toFixed(1)}`);
+    game.player.exitVehicle(true);
+    game.player.place(civ.x, civ.z - 8, 0);
+    game.camera.yaw = 0;
+    game.weapons.give('smg', 60); game.weapons.select('smg');
+    const stolen = game.stats.cars;
+    game.input.buttons[2] = true; run(0.1); game.input.buttons[2] = false;
+    out.push(`gunpoint bailed=${!!civ.bailed} driver=${civ.driver}`);
+    game.player.place(civ.x + 2.5, civ.z, 0);
+    game.input.pressed.add('KeyF'); run(0.1);
+    out.push(`stolen=${game.player.vehicle === civ && game.stats.cars === stolen + 1}`);
+    game.player.exitVehicle(true);
+    const sc = game.traffic.spawnCar(6, 3, { x: 0, z: -1 }, 40, 'scooter');
+    sc.ai.reckless = true; sc.ai.cruise = 0; sc.ai.speed = 0;
+    const v4 = new Vehicle(game, 'coupe', sc.x - 3.4, sc.z + 22, Math.PI);
+    v4.vz = -26; game.vehicles.push(v4); game.player.enterVehicle(v4);
+    const cash = game.money;
+    run(1.3);
+    out.push(`nearMiss total=${game.nearMiss.total} paid=${game.money - cash >= 40}`);
     const report = `SYSTEMSTEST ${out.join(' | ')}`;
     const o = document.getElementById('error-overlay');
     o.style.display = 'block'; o.textContent += report;

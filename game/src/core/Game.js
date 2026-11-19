@@ -22,6 +22,7 @@ import { Effects } from '../effects/Effects.js';
 import { resolveCarCollisions } from '../vehicles/CarPhysics.js';
 import { MissionDirector } from '../missions/MissionDirector.js';
 import { StreetRace } from '../activities/StreetRace.js';
+import { NearMiss } from '../activities/NearMiss.js';
 import { Hud } from '../ui/Hud.js';
 import { Minimap } from '../ui/Minimap.js';
 import { Menus } from '../ui/Menus.js';
@@ -69,6 +70,7 @@ export class Game {
     this.weapons = new WeaponSystem(this);
     this.missions = new MissionDirector(this);
     this.race = new StreetRace(this);
+    this.nearMiss = new NearMiss(this);
     this.rank = new RankSystem(this);
     this.crew = new CrewAbilities(this);
     this.hud = new Hud(this);
@@ -271,6 +273,7 @@ export class Game {
       if (this.state === 'playing') {
         this.missions.update(dt, this.time);
         this.race.update(dt, this.time);
+        this.nearMiss.update(dt);
         this.pickups.update(dt, this.time);
         this.camera.update(dt);
         this.driftSmoke();

@@ -66,6 +66,7 @@
   <div id="dialogue"><canvas id="dialogue-portrait" width="96" height="96"></canvas><div><div id="dialogue-speaker"></div><div id="dialogue-role"></div><div id="dialogue-text"></div></div></div>
   <div id="banner"><div id="banner-title"></div><div id="banner-sub"></div></div>
   <div id="toast"></div>
+  <div id="stunt"></div>
   <div id="damage-flash"></div>
 </div>
 
@@ -92,15 +93,16 @@
   <div class="pause-layout">
     <div class="map-panel"><canvas id="bigmap" width="720" height="720"></canvas></div>
     <div class="pause-side">
-      <div class="logo small">SALT<span>LINE</span></div>
-      <div id="pause-heading">PAUSED</div>
-      <div class="menu" id="pause-menu">
+      <div class="pause-top"><div class="logo small">SALT<span>LINE</span></div><div id="pause-heading">PAUSED</div></div>
+      <div class="menu row" id="pause-menu">
         <button data-action="resume">Resume</button>
         <button data-action="save">Save Game</button>
         <button data-action="title">Quit to Title</button>
       </div>
-      <div id="stats"></div>
-      <div id="legend"></div>
+      <div class="pause-box"><h3>STORY JOBS</h3><div id="job-list"></div></div>
+      <div id="stat-tiles"></div>
+      <div class="pause-box"><div id="stats"></div></div>
+      <div class="pause-box"><div id="legend"></div></div>
     </div>
   </div>
 </div>

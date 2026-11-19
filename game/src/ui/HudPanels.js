@@ -119,7 +119,9 @@ export class HudPanels {
   }
 
   updateCrew() {
-    const crew = this.game.crew;
+    const game = this.game, crew = game.crew;
+    // The crew only gets a panel when they can help: driving, under heat, or with an ability live.
+    $('crew-panel').style.display = game.player.vehicle || game.wanted.level > 0 || crew.eyesOut ? 'block' : 'none';
     for (const c of this.crewRows) {
       const left = crew.cooldowns[c.member.id];
       const active = c.member.id === 'eyes' && crew.eyesOut;
